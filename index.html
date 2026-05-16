@@ -204,10 +204,10 @@
 					<div class="step-title">1. Initialization (初始化)</div>
 					<p>將 <strong>Key (金鑰)</strong>、<strong>Nonce (絕對不重複的隨機數)</strong> 與 IV 寫入 320-bit 的內部狀態中。接著透過排列函數劇烈攪拌，建立不可預測的初始防護罩。</p>
 				</a>
-                <div class="flow-step">
+                <a href="ad.html" class="flow-step" style="text-decoration: none; color: inherit; display: block;">
                     <div class="step-title">2. Associated Data (關聯資料吸收)</div>
                     <p>處理封包表頭 (Header) 等「不需加密、但防竄改」的資料。將其 XOR 融入狀態中，最後加入一個 Domain Separation Bit，用來明確區分接下來的階段。</p>
-                </div>
+                </a>
                 <div class="flow-step">
                     <div class="step-title">3. Plaintext / Ciphertext (明文處理)</div>
                     <p>將機密的 <strong>Plaintext (明文)</strong> 與內部狀態進行 XOR 運算，直接產生 <strong>Ciphertext (密文)</strong>。每處理一個區塊，就再次呼叫排列函數更新狀態，確保前後文關聯。</p>

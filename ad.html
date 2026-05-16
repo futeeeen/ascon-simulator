@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 關聯資料吸收 (Associated Data) 實驗室</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #e67e22;
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --calc-bg: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 5px solid var(--secondary);
+        }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .input-group input { 
+            width: 100%; padding: 10px; border: 2px solid #ddd; 
+            border-radius: 5px; font-family: monospace; font-size: 1.1rem;
+            box-sizing: border-box;
+        }
+        
+        .state-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        .state-label { font-weight: bold; color: #3498db; }
+        .state-value { letter-spacing: 1.5px; word-break: break-all; transition: all 0.3s; }
+        .state-value.flash { background-color: #d35400; color: #fff; font-weight: bold; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        button {
+            background-color: var(--secondary); color: white; border: none;
+            padding: 12px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background-color: #d35400; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .trace-panel {
+            background: var(--calc-bg);
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 5px solid #e67e22;
+            white-space: pre-wrap;
+        }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        .formula { color: #a29bfe; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🌪️ ASCON 關聯資料吸收 (Associated Data) 實驗室</h1>
+    <p>在此階段，系統處理不需加密、但必須防止竄改的封包表頭資料。資料會被填補並 XOR 揉入 <strong>x0</strong> 中，最後在 <strong>x4</strong> 注入領域分離標籤。</p>
+    
+    <a href="index.html" style="color: #e67e22; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
+
+    <div class="container">
+        <h2>1. 設定 Associated Data (關聯資料)</h2>
+        <div class="input-group">
+            <label for="ad-input">輸入字串 (例如封包表頭):</label>
+            <input type="text" id="ad-input" value="NIST">
+        </div>
+        <div class="controls">
+            <button id="btn-pad" onclick="processPadding()">1. 進行填補 (Padding)</button>
+            <button id="btn-xor" onclick="processXor()" disabled>2. XOR 揉入狀態</button>
+            <button id="btn-sep" onclick="processSeparation()" disabled>3. 領域分離 (Domain Sep)</button>
+            <button class="reset-btn" style="background-color: #e74c3c;" onclick="resetLab()">重置實驗室</button>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #2c3e50;">
+        <h2>⚙️ 吸收過程即時追蹤</h2>
+        <div class="trace-panel" id="trace-panel">💡 點擊上方按鈕開始模擬，此處將即時解密每一道密碼學工序。</div>
+        
+        <h3>當前 320-bit 內部狀態</h3>
+        <div class="state-grid">
+            <div class="state-label">x0 (Rate 吸收槽) :</div><div class="state-value" id="val-x0">0000000000000000</div>
+            <div class="state-label">x1 (Capacity)    :</div><div class="state-value" id="val-x1">0000000000000000</div>
+            <div class="state-label">x2 (Capacity)    :</div><div class="state-value" id="val-x2">0000000000000000</div>
+            <div class="state-label">x3 (Capacity)    :</div><div class="state-value" id="val-x3">0000000000000000</div>
+            <div class="state-label">x4 (Capacity)    :</div><div class="state-value" id="val-x4">0000000000000000</div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬初始化之後的內部狀態暫存器值
+        let x0 = 0x80400C0600000000n;
+        let x1 = 0x0001020304050607n;
+        let x2 = 0x08090A0B0C0D0E0Fn;
+        let x3 = 0x1020304050607080n;
+        let x4 = 0x9999999999999999n;
+        
+        let paddedBlockHex = "";
+        let paddedBlockBigInt = 0n;
+
+        function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
+
+        function updateDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(x0);
+            document.getElementById('val-x1').innerText = formatHex(x1);
+            document.getElementById('val-x2').innerText = formatHex(x2);
+            document.getElementById('val-x3').innerText = formatHex(x3);
+            document.getElementById('val-x4').innerText = formatHex(x4);
+        }
+
+        function resetLab() {
+            x0 = 0x80400C0600000000n; x1 = 0x0001020304050607n; x2 = 0x08090A0B0C0D0E0Fn; x3 = 0x1020304050607080n; x4 = 0x9999999999999999n;
+            updateDisplay();
+            document.querySelectorAll('.state-value').forEach(el => el.classList.remove('flash'));
+            document.getElementById('btn-pad').disabled = false;
+            document.getElementById('btn-xor').disabled = true;
+            document.getElementById('btn-sep').disabled = true;
+            document.getElementById('trace-panel').innerHTML = "💡 點擊上方按鈕開始模擬，此處將即時解密每一道密碼學工序。";
+        }
+
+        function stringToHex(str) {
+            let hex = "";
+            for (let i = 0; i < str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        function processPadding() {
+            let adStr = document.getElementById('ad-input').value;
+            let rawHex = stringToHex(adStr);
+            
+            // ASCON Padding 規則: 在資料尾端補上 0x80 (二進位的 10000000)，其餘補 0 直到滿 16 個 Hex 字元 (64-bit)
+            paddedBlockHex = rawHex + "80";
+            paddedBlockHex = paddedBlockHex.padEnd(16, '0');
+            paddedBlockBigInt = BigInt("0x" + paddedBlockHex);
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 1: ASCON 填補工藝 (Padding)]
+原始字串： "${adStr}" ➔ 十六進位 Hex: ${rawHex.toUpperCase()}
+<span class="formula">標準填補規則：資料後方強制追加一位元 '1'，其餘補 '0' 滿 64-bit。</span>
+填補後區塊 (A1)： <span class="highlight">${paddedBlockHex.toUpperCase()}</span>`;
+            
+            document.getElementById('btn-pad').disabled = true;
+            document.getElementById('btn-xor').disabled = false;
+        }
+
+        function processXor() {
+            let oldX0 = x0;
+            x0 = x0 ^ paddedBlockBigInt; // XOR 融入狀態的第一個字組
+            
+            updateDisplay();
+            document.getElementById('val-x0').classList.add('flash');
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 2: XOR 融入吸收槽]
+將對齊好的 64-bit 關聯資料區塊，與狀態矩陣頂部的暫存器 x0 進行互斥或 (XOR)：
+<span class="formula">公式：x0 = x0 ⊕ A1</span>
+  原本的 x0 = ${formatHex(oldX0)}
+  ⊕ 資料塊  = ${paddedBlockHex.toUpperCase()}
+  ----------------------------------
+  <span class="highlight">新狀態 x0 = ${formatHex(x0)}</span>
+
+<small style="color:#bdc3c7;">(備註：真實標準中，XOR 完後會啟動核心 Permutation 攪拌狀態，此處簡化流向以便閱讀)</small>`;
+
+            document.getElementById('btn-xor').disabled = true;
+            document.getElementById('btn-sep').disabled = false;
+        }
+
+        function processSeparation() {
+            document.getElementById('val-x0').classList.remove('flash');
+            let oldX4 = x4;
+            
+            // 領域分離位元：XOR 到 x4 的最後一個 bit (LSB)
+            x4 = x4 ^ 1n;
+            
+            updateDisplay();
+            document.getElementById('val-x4').classList.add('flash');
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 3: 領域分離 (Domain Separation)]
+所有關聯資料已完全吸收。為了防止駭客利用改變「關聯資料」與「明文」長度配比的滑動攻擊 (Slide Attack)，
+系統在此處強制將常數 1 注入到矩陣底部的 x4 暫存器中。
+<span class="formula">公式：x4 = x4 ⊕ 1</span>
+  原本的 x4 = ${formatHex(oldX4)}
+  ----------------------------------
+  <span class="highlight">新狀態 x4 = ${formatHex(x4)}</span> <span class="highlight">(最後一位元已成功反轉！)</span>
+  
+<strong>🌟 階段完結：</strong>狀態已牢牢蓋上「AD結束印章」，安全準備進入下一階段：明文與密文處理！`;
+
+            document.getElementById('btn-sep').disabled = true;
+        }
+
+        resetLab();
+    </script>
+</body>
+</html>
