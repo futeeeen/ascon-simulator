@@ -231,7 +231,7 @@
     <div class="container">
         
         <section class="section-card">
-            <h2>📦 A. ASCON 家族核心成員</h2>
+            <h2>📦 ASCON 家族核心成員</h2>
             <p>ASCON 並非單一演算法，而是一個密碼學套件家族，對應不同的安全需求：</p>
             <div class="family-grid">
                 <div class="member-card">
@@ -247,14 +247,60 @@
                     <p><strong>特色：</strong> 適用於韌體更新驗證、數位簽章等不需解密的場景。</p>
                 </div>
             </div>
-            <div class="note-box">
+        </section>
+		
+		<section class="section-card">
+            <h2>🆚 核心成員對比</h2>
+            <p>以下是主打雙工加密的 Ascon-AEAD128 與主打數位指紋的 Ascon-Hash256 核心對比：</p>
+            
+            <div style="overflow-x: auto; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #cbd5e1; color: #2c3e50;">
+                            <th style="padding: 10px; font-weight: bold;">安全特徵</th>
+                            <th style="padding: 10px; font-weight: bold;">Ascon-AEAD128 (認證加密)</th>
+                            <th style="padding: 10px; font-weight: bold;">Ascon-Hash256 (單向雜湊)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: bold; color: #7f8c8d;">機密參數</td>
+                            <td style="padding: 12px 10px;">需要 128-bit 金鑰 (Key) 與隨機數 (Nonce)</td>
+                            <td style="padding: 12px 10px; color: #e67e22; font-weight: bold;">完全不需要 (無金鑰公開函數)</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: bold; color: #7f8c8d;">內部攪拌強度</td>
+                            <td style="padding: 12px 10px;">處理資料時中間只攪拌 6 回合 (<i>b</i> = 6)</td>
+                            <td style="padding: 12px 10px; color: #9b59b6; font-weight: bold;">全程升級強烈攪拌 12 回合 (<i>b</i> = 12)</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: bold; color: #7f8c8d;">資料處理流</td>
+                            <td style="padding: 12px 10px;">明文 XOR 融入狀態，並<span style="color:#e67e22; font-weight:bold;">立即吐出密文</span></td>
+                            <td style="padding: 12px 10px;">訊息單向吸入海綿槽，<span style="color:#e67e22; font-weight:bold;">全程只進不出</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: bold; color: #7f8c8d;">最終產出</td>
+                            <td style="padding: 12px 10px;">注入金鑰，提取出 128-bit 認證標籤 (Tag)</td>
+                            <td style="padding: 12px 10px;">連續擠壓海綿，吐出 256-bit 雜湊值 (Hash)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px; text-align: right;">
+                <a href="hash.html" style="text-decoration: none; color: #3498db; font-weight: bold; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 5px;">
+                    🔍 深入探索：查看 Ascon-Hash256 的極簡三步驟與海綿對比儀 ➔
+                </a>
+            </div>
+
+            <div class="note-box" style="margin-top: 20px;">
                 <strong>💡 核心共通點筆記：</strong><br>
-                無論是 AEAD 還是 Hash，它們底層都共用了極其相似的<strong>海綿結構 (Sponge Construction)</strong> 與 <strong>320-bit 核心排列函數 (Ascon-p)</strong>。這意味著在晶片硬體實作時，這兩種功能可以「共用同一套電路」，大幅節省硬體面積與耗電量！
+                無論是 AEAD 還是 Hash，它們底層都共用了極其相似的<strong>海綿結構 (Sponge Construction)</strong> 與 <strong>320-bit 核心排列函數 (Ascon-<i>p</i>)</strong>。這意味著在晶片硬體實作時，這兩種功能可以「共用同一套布林邏輯電路」，大幅節省硬體面積與耗電量！
             </div>
         </section>
 
         <section class="section-card">
-            <h2>🔄 B. ASCON-AEAD 加密流程解析</h2>
+            <h2>🔄 ASCON-AEAD 加密流程解析</h2>
             <p>ASCON-AEAD 的運作就像是一條極具效率的輸送帶，資料只需通過一次 (Single-pass) 即可完成加密與認證：</p>
             
             <div class="flowchart">
@@ -288,7 +334,7 @@
 		
 		<section class="section-card" style="border-top-color: #e74c3c;">
             <a href="decrypt.html" style="text-decoration: none; color: inherit; display: block;">
-                <h2>🔓 C. ASCON 接收端解密流程與資安</h2>
+                <h2>🔓 ASCON 接收端解密流程與資安</h2>
                 <p>ASCON 是基於 <strong>XOR (互斥或)</strong> 運算的海綿雙工結構。接收端在收到封包後，必須利用相同的共享金鑰與隨機數進行認證解密：</p>
                 
                 <ul style="margin-top: 12px; padding-left: 20px; color: #555; font-size: 0.95rem;">
@@ -307,7 +353,7 @@
         </section>
 
         <section class="section-card">
-            <h2>🛡️ D. 鐵壁般的安全性機制</h2>
+            <h2>🛡️ 鐵壁般的安全性機制</h2>
             <div class="security-box">
                 <h3>解密時，驗證失敗絕對不能輸出明文！</h3>
                 <p>在 ASCON 的解密過程中，系統會先計算出標籤，並與夾帶的 Tag 進行比對。<strong>如果 Tag 不符，系統只會無情地回傳 `fail`，絕對不會交出任何解密到一半的明文。</strong></p>
@@ -322,7 +368,7 @@
         </section>
 
         <section class="section-card">
-            <h2>⚖️ D. ASCON 的優勢與局限性</h2>
+            <h2>⚖️ ASCON 的優勢與局限性</h2>
             <div class="pros-cons-container">
                 <div class="pros-box">
                     <h3>✅ ASCON 的優勢</h3>

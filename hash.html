@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ascon-Hash256 極簡三步驟與海綿結構</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #9b59b6; /* 使用紫色代表 Hash 的高強度攪拌 */
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 6px solid var(--secondary);
+        }
+        .back-link {
+            color: #3498db; text-decoration: none; font-weight: bold;
+            display: inline-flex; align-items: center; gap: 5px; margin-bottom: 20px;
+        }
+        
+        /* 步驟卡片樣式 */
+        .hash-step-card {
+            background: #fff; border-left: 4px solid var(--secondary);
+            padding: 20px; margin-bottom: 15px; border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .step-num { font-weight: bold; color: var(--secondary); font-size: 1.2rem; margin-bottom: 5px; }
+        
+        /* 視覺化儀器面板 */
+        .instrument-panel {
+            background: #2c3e50; color: #ecf0f1; padding: 25px; border-radius: 10px;
+            margin-top: 20px; font-family: monospace;
+        }
+        .mode-btn {
+            background: #34495e; color: #cbd5e1; border: none; padding: 10px 20px;
+            font-size: 1rem; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s;
+        }
+        .mode-btn.active { background: var(--secondary); color: white; }
+        .sponge-pipe {
+            border: 2px dashed #7f8c8d; padding: 15px; border-radius: 6px; margin-top: 15px;
+            background: #1a252f; text-align: center; font-size: 1.1rem;
+        }
+        .highlight-text { color: #f1c40f; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-link">← 返回 ASCON 介紹首頁</a>
+
+    <h1>📜 Ascon-Hash256 核心運作機制</h1>
+    <p>Ascon-Hash256 是最新一代的輕量級雜湊標準。與加密模式不同，它是一套公開的單向函數，用於確保檔案的完整性（防偽與韌體驗證）。</p>
+
+    <div class="container">
+        <h2>🔍 Ascon-Hash256 的極簡三步驟</h2>
+        <p>🧠 <strong>形象化比喻：</strong>你可以把 Ascon-Hash 想像成一台<strong>「只進不出」的超級果汁機</strong>，在處理資料的途中完全封閉，直到最後一刻才把萃取出的果汁倒出來：</p>
+        
+        <div class="hash-step-card">
+            <div class="step-num">1. 初始化 (Initialization)</div>
+            <p>由於雜湊不需要金鑰與隨機數，320-bit 的狀態矩陣只會在一開始載入一段固定的 64-bit IV 參數，剩下其餘空間全部無條件填入 0。隨後，立即啟動最高規格的 <strong>12 回合</strong> Permutation 強烈攪拌。</p>
+        </div>
+
+        <div class="hash-step-card">
+            <div class="step-num">2. 吸收訊息 (Absorbing)</div>
+            <p>將要計算雜湊的檔案切成每區塊 64-bit 大小。一塊一塊經由 XOR 融入 <i>x<sub>0</sub></i> 海綿吸收槽。每吃進一塊資料，果汁機就會對全狀態進行 <strong>12 回合</strong>（比加密端更強烈）的置換攪拌。<strong>注意：在此階段海綿管線完全封閉，不輸出任何密文。</strong></p>
+        </div>
+
+        <div class="hash-step-card">
+            <div class="step-num">3. 擠壓輸出 (Squeezing)</div>
+            <p>當檔案全部被吃完且揉捏完畢後，進入擠壓階段。系統從 <i>x<sub>0</sub></i> 槽抽出前 64 位元，接著呼叫 12 回合置換將狀態再次打碎，再從 <i>x<sub>0</sub></i> 抽出 64 位元... 如此<strong>重複循環四次</strong>，最終拼湊出完整的 256-bit 數位指紋（Hash 值）。</p>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #2c3e50;">
+        <h2>🔄 3. ASCON 雙模式海綿結構對比儀</h2>
+        <p>親自點擊切換下方模式，觀察 ASCON 是如何調整內部「管線閥門」與「攪拌回合」來切換任務的：</p>
+        
+        <div class="instrument-panel">
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                <button id="btn-aead" class="mode-btn active" onclick="switchMode('AEAD')">🔒 Ascon-AEAD128 (認證加密)</button>
+                <button id="btn-hash" class="mode-btn" onclick="switchMode('HASH')">📜 Ascon-Hash256 (單向雜湊)</button>
+            </div>
+
+            <div style="background:#222f3e; padding:15px; border-radius:6px; font-family:sans-serif;">
+                <strong>📊 核心心臟強度 (Permutation Rounds)：</strong> 
+                <span id="cfg-rounds" class="highlight-text">初始化 12 回合 / 資料處理 6 回合</span>
+            </div>
+
+            <div class="sponge-pipe" id="pipe-visual">
+                明文 P1 ➔ ⊕ XOR 融入 <b>x0 槽</b> ➔ <span class="highlight-text">立即吐出密文 C1 📤</span> (管線開啟)
+            </div>
+
+            <div style="margin-top: 15px; font-size: 0.95rem; line-height: 1.5; color: #cbd5e1;" id="mode-desc">
+                💡 <strong>AEAD 模式特點：</strong>在處理資料時（吸收明文），為了追求極致的傳輸效率，中間的回合數調降為 6 回合，且每吃進一個明文塊就必須立刻生出對應的密文塊供網路發送。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchMode(mode) {
+            const btnAead = document.getElementById('btn-aead');
+            const btnHash = document.getElementById('btn-hash');
+            const cfgRounds = document.getElementById('cfg-rounds');
+            const pipeVisual = document.getElementById('pipe-visual');
+            const modeDesc = document.getElementById('mode-desc');
+
+            if (mode === 'AEAD') {
+                btnAead.classList.add('active');
+                btnHash.classList.remove('active');
+                cfgRounds.innerText = "初始化 12 回合 / 資料處理 6 回合 (b = 6)";
+                pipeVisual.innerHTML = `明文 P1 ➔ XOR 融入 <b>x0 槽</b> ➔ <span style="color:#3498db; font-weight:bold;">[輸出] 立即吐出密文 C1 📤</span> (管線對外開啟)`;
+                modeDesc.innerHTML = `💡 <strong>AEAD 模式特點：</strong>在加密傳輸時，海綿呈現雙工狀態。資料一邊進來，密文一邊流出。中間攪拌為了兼顧物聯網低延遲，採用優化的 6 回合防護。`;
+            } else {
+                btnHash.classList.add('active');
+                btnAead.classList.remove('active');
+                cfgRounds.innerText = "初始化 12 回合 / 資料處理 12 回合 (b = 12)";
+                pipeVisual.innerHTML = `訊息 M1 ➔ XOR 融入 <b>x0 槽</b> ➔ <span style="color:#e67e22; font-weight:bold;">[封閉] 只進不出！❌ 內部持續揉捏</span> (管線對外關閉)`;
+                modeDesc.innerHTML = `💡 <strong>Hash 模式特點：</strong>果汁機模式。全程不洩漏任何中間狀態或密文。因為完全公開且沒有 Key 的庇護，為了防範密碼學上的碰撞攻擊，資料處理階段的回合數必須強悍地維持滿格的 12 回合！`;
+            }
+        }
+    </script>
+</body>
+</html>
