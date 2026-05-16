@@ -148,7 +148,7 @@
     <div class="container">
         
         <section class="section-card">
-            <h2>📦 A. ASCON 家族核心成員</h2>
+            <h2>📦 ASCON 家族核心成員</h2>
             <p>ASCON 並非單一演算法，而是一個密碼學套件家族，對應不同的安全需求：</p>
             <div class="family-grid">
                 <div class="member-card">
@@ -171,7 +171,7 @@
         </section>
 
         <section class="section-card">
-            <h2>🔄 B. ASCON-AEAD 加密流程解析</h2>
+            <h2>🔄 ASCON-AEAD 加密流程解析</h2>
             <p>ASCON-AEAD 的運作就像是一條極具效率的輸送帶，資料只需通過一次 (Single-pass) 即可完成加密與認證：</p>
             
             <div class="flowchart">
@@ -195,7 +195,7 @@
         </section>
 
         <section class="section-card">
-            <h2>🛡️ C. 鐵壁般的安全性機制</h2>
+            <h2>🛡️ 鐵壁般的安全性機制</h2>
             <div class="security-box">
                 <h3>解密時，驗證失敗絕對不能輸出明文！</h3>
                 <p>在 ASCON 的解密過程中，系統會先計算出標籤，並與夾帶的 Tag 進行比對。<strong>如果 Tag 不符，系統只會無情地回傳 `fail`，絕對不會交出任何解密到一半的明文。</strong></p>
