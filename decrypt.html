@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 接收端認證解密 (Decryption & Verification)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #e74c3c; /* 紅色代表接收端的安全檢查 */
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --calc-bg: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 5px solid var(--secondary);
+        }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .input-group input { 
+            width: 100%; padding: 10px; border: 2px solid #ddd; 
+            border-radius: 5px; font-family: monospace; font-size: 1.1rem;
+            box-sizing: border-box; text-transform: uppercase;
+        }
+        
+        .state-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        .state-label { font-weight: bold; color: #3498db; }
+        .state-value { letter-spacing: 1.5px; word-break: break-all; transition: all 0.3s; }
+        .state-value.flash-mix { background-color: #c0392b; color: #fff; font-weight: bold; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        button {
+            background-color: var(--secondary); color: white; border: none;
+            padding: 12px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background-color: #c0392b; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .trace-panel {
+            background: var(--calc-bg);
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 5px solid var(--secondary);
+            white-space: pre-wrap;
+        }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        .formula { color: #a29bfe; font-weight: bold; }
+        
+        .result-box {
+            padding: 20px; border-radius: 10px; font-family: monospace; 
+            font-size: 1.3rem; font-weight: bold; text-align: center; 
+            margin-top: 15px; display: none;
+        }
+        .success-box { background: #e8f8f5; border: 3px double #27ae60; color: #1e8449; }
+        .fail-box { background: #fdedec; border: 3px double #e74c3c; color: #922b21; }
+
+        .math-demo {
+            background: #fff3cd; border-left: 4px solid #f1c40f; padding: 12px;
+            margin-top: 10px; border-radius: 4px; font-size: 0.95rem; color: #856404;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🛡️ ASCON 接收端認證解密 (Decryption) 實驗室</h1>
+    <p>收到密文的裝置不能直接信任資料。它必須使用相同的 Key 與 Nonce 重新推演海綿狀態，在解密的同時進行數學防偽驗證。</p>
+    
+    <a href="index.html" style="color: var(--secondary); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
+
+    <div class="container">
+        <h2>1. 模擬接收端收到的網路封包</h2>
+        <p>💡 <strong>你可以試著修改「密文」或「驗證標籤」的任一個字元</strong>，看看最後的驗證機制是否能發揮警報作用：</p>
+        <div class="input-group">
+            <label>Ciphertext (收到的密文 - Hex):</label>
+            <input type="text" id="in-c" value="CE4A7A4E80123456">
+        </div>
+        <div class="input-group">
+            <label>Received Tag (收到的防偽印章 - Hex):</label>
+            <input type="text" id="in-tag" value="9FA182B3C4D5E6F0">
+        </div>
+        <div class="controls">
+            <button id="btn-init" onclick="stepInit()">1. 重新初始化</button>
+            <button id="btn-ad" onclick="stepAD()" disabled>2. 處理關聯資料</button>
+            <button id="btn-dec" onclick="stepDecrypt()" disabled>3. XOR 解密密文</button>
+            <button id="btn-tag" onclick="stepVerify()" disabled>4. 重算與安全驗證</button>
+            <button class="reset-btn" style="background-color: #7f8c8d;" onclick="resetLab()">重置驗證</button>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #2c3e50;">
+        <h2>⚙️ 接收端流水線即時追蹤</h2>
+        <div class="trace-panel" id="trace-panel">💡 點擊上方按鈕，開始執行接收端的安全通關工序。</div>
+        
+        <div id="status-display" class="result-box"></div>
+
+        <h3>接收端 320-bit 內部狀態 (Internal State)</h3>
+        <div class="state-grid">
+            <div class="state-label">x0 ( Rate 槽 ) :</div><div class="state-value" id="val-x0">0000000000000000</div>
+            <div class="state-label">x1             :</div><div class="state-value" id="val-x1">0000000000000000</div>
+            <div class="state-label">x2             :</div><div class="state-value" id="val-x2">0000000000000000</div>
+            <div class="state-label">x3             :</div><div class="state-value" id="val-x3">0000000000000000</div>
+            <div class="state-label">x4             :</div><div class="state-value" id="val-x4">0000000000000000</div>
+        </div>
+    </div>
+
+    <script>
+        // 接收端已知的安全金鑰與隨機數
+        const KeyH = 0x0001020304050607n;
+        const KeyL = 0x08090A0B0C0D0E0Fn;
+        const NonceH = 0x0000000000000000n;
+        const NonceL = 0x0000000000000001n;
+        const IV = 0x80400C0600000000n;
+
+        let x0=0n, x1=0n, x2=0n, x3=0n, x4=0n;
+        let recoveredPlaintextHex = "";
+
+        function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
+
+        function updateDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(x0);
+            document.getElementById('val-x1').innerText = formatHex(x1);
+            document.getElementById('val-x2').innerText = formatHex(x2);
+            document.getElementById('val-x3').innerText = formatHex(x3);
+            document.getElementById('val-x4').innerText = formatHex(x4);
+        }
+
+        function resetLab() {
+            x0=0n; x1=0n; x2=0n; x3=0n; x4=0n;
+            updateDisplay();
+            ['x0','x1','x2','x3','x4'].forEach(id => document.getElementById('val-'+id).className = "state-value");
+            document.getElementById('status-display').style.display = 'none';
+            document.getElementById('btn-init').disabled = false;
+            document.getElementById('btn-ad').disabled = true;
+            document.getElementById('btn-dec').disabled = true;
+            document.getElementById('btn-tag').disabled = true;
+            document.getElementById('trace-panel').innerHTML = "💡 點擊上方按鈕，開始執行接收端的安全通關工序。";
+        }
+
+        function stepInit() {
+            // Step 1: 重新初始化矩陣
+            x0 = IV; x1 = KeyH; x2 = KeyL; x3 = NonceH; x4 = NonceL;
+            // 模擬 Permutation 攪拌
+            x0 ^= 0x1A2B3C4D5E6F7081n; x1 ^= 0x8172635443322110n;
+            updateDisplay();
+
+            document.getElementById('trace-panel').innerHTML = 
+`[Step 1: 重新初始化 State]
+接收端使用原本擁有的 <span class="highlight">Secret Key</span> 與封包帶來的 <span class="highlight">Nonce</span> 重組陣型：
+<span class="formula">狀態佈陣：state ← IV || K || N</span>
+接著啟動排列函數置換（Permutation）。此時產生的內部陣型與加密端起跑時完全同步！`;
+
+            document.getElementById('btn-init').disabled = true;
+            document.getElementById('btn-ad').disabled = false;
+        }
+
+        function stepAD() {
+            // Step 2: 處理 Associated Data (假設原本的 AD 填補後為 4E49535480000000)
+            let adBlock = 0x4E49535480000000n;
+            x0 ^= adBlock;
+            // 模擬 Permutation 攪拌
+            x2 ^= 0x9FA182B3C4D5E6F0n; x4 ^= 1n; // 包含領域分離
+            updateDisplay();
+
+            document.getElementById('trace-panel').innerHTML = 
+`[Step 2: 處理 Associated Data]
+將收到的公開認證標頭（AD）XOR 揉入 x0 中，並再次執行 Permutation 攪拌：
+<span class="formula">公式：state ^= AD</span>
+此步驟確保接收端接下來產生的金鑰流（Keystream）與封包表頭強烈相依，只要表頭被竄改，後續解密就會全盤崩潰。`;
+
+            document.getElementById('btn-ad').disabled = true;
+            document.getElementById('btn-dec').disabled = false;
+        }
+
+        function stepDecrypt() {
+            // 取得使用者輸入的密文
+            let cInput = document.getElementById('in-c').value;
+            let cBigInt = 0n;
+            try { cBigInt = BigInt("0x" + cInput); } catch(e) { cBigInt = 0xCE4A7A4E80123456n; }
+
+            // 模擬此時狀態產生的真實密碼學 Keystream S (假設為 0x55555555AAAAAAAAn)
+            let keystreamS = 0x55555555AAAAAAAAn;
+
+            // 解密公式： P = C XOR S
+            let pBigInt = cBigInt ^ keystreamS;
+            recoveredPlaintextHex = formatHex(pBigInt);
+
+            // 在雙工海綿模式中，解密端必須將密文覆蓋回 x0，以保持與加密端相同的海綿狀態
+            x0 = cBigInt;
+            updateDisplay();
+            document.getElementById('val-x0').className = "state-value flash-mix";
+
+            document.getElementById('trace-panel').innerHTML = 
+`[Step 3: 解密 Ciphertext]
+ASCON 是互斥或（XOR）導向。利用「任何數字 XOR 自己兩次會還原」的數學特性進行無損解密：
+<span class="formula">解密公式：P = C ⊕ S</span>
+  收到的密文 C = ${formatHex(cBigInt)}
+  ⊕ 金鑰流 S   = ${formatHex(keystreamS)} (由內部海綿自動生成)
+  ----------------------------------
+  暫存明文 P   = <span class="highlight">${recoveredPlaintextHex}</span>
+
+<div class="math-demo">
+  <strong>🧠 你的位元自證互補舉例：</strong><br>
+  明文 P = 1100，金鑰流 S = 1010<br>
+  ➔ 加密端：1100 ⊕ 1010 = 0110 (密文 C)<br>
+  ➔ 解密端：0110 ⊕ 1010 = <strong>1100</strong> (成功還原明文 P！公式：(P ⊕ S) ⊕ S = P)
+</div>
+<span class="secondary" style="color:#e67e22;">⚠️ 安全警示：此時解出的明文屬於「未驗證狀態」，絕對禁止交付給上層應用程式！</span>`;
+
+            document.getElementById('btn-dec').disabled = true;
+            document.getElementById('btn-tag').disabled = false;
+        }
+
+        function stepVerify() {
+            document.getElementById('val-x0').className = "state-value";
+
+            // 取得使用者輸入要比對的收到的 Tag
+            let receivedTagInput = document.getElementById('in-tag').value.trim().toUpperCase();
+
+            // 模擬 Finalization 階段計算出來的正確驗證碼 Tag'
+            // 如果輸入密文是預設的 "CE4A7A4E80123456"，正確的 Tag 應該是 "9FA182B3C4D5E6F0"
+            let correctC = "CE4A7A4E80123456";
+            let computedTag = "9FA182B3C4D5E6F0";
+
+            if (document.getElementById('in-c').value.trim().toUpperCase() !== correctC) {
+                // 如果密文被改了，算出來的 Tag' 就會對不上
+                computedTag = "E7A1B2888888FFFF"; 
+            }
+
+            let statusEl = document.getElementById('status-display');
+            statusEl.style.display = "block";
+
+            if (computedTag === receivedTagInput) {
+                statusEl.className = "result-box success-box";
+                statusEl.innerHTML = `✅ 驗證成功 (Tag' == Tag)<br>接受明文 (Plaintext)：${recoveredPlaintextHex}`;
+                
+                document.getElementById('trace-panel').innerHTML = 
+`[Step 4 & 5: 標籤重算與比對驗證]
+解密端跑完 Finalization 攪拌後得到自算標籤 Tag'：<span class="highlight">${computedTag}</span>
+與網路封包夾帶的 Received Tag：<span class="highlight">${receivedTagInput}</span> 進行核對。
+<span class="formula">比對結果：Tag' = Tag (完全相符)</span>
+
+<strong>🎉 安全通關：</strong> 數據完整性與來源認證皆 100% 通過，明文已安全解鎖並正式交付系統！`;
+            } else {
+                statusEl.className = "result-box fail-box";
+                statusEl.innerHTML = `❌ 安全警報：驗證失敗！(Tag' != Tag)<br>系統已銷毀暫存資料，拒絕交出明文！`;
+
+                document.getElementById('trace-panel').innerHTML = 
+`[Step 4 & 5: 標籤重算與比對驗證]
+解密端跑完 Finalization 攪拌後得到自算標籤 Tag'：<span style="color:#e74c3c; font-weight:bold;">${computedTag}</span>
+與網路封包夾帶的 Received Tag：<span style="color:#e74c3c; font-weight:bold;">${receivedTagInput}</span> 進行核對。
+<span class="formula" style="color:#e74c3c;">比對結果：不相等 (資料遭受竄改或金鑰錯誤！)</span>
+
+<strong>🚨 密碼學鐵則阻斷：</strong> 
+認證失敗！系統啟動防爆機制，拒絕輸出任何解密資訊，完美防禦選擇密文攻擊 (CCA)！`;
+            }
+
+            document.getElementById('btn-tag').disabled = true;
+        }
+
+        resetLab();
+    </script>
+</body>
+</html>

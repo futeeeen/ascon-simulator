@@ -218,9 +218,20 @@
                 </a>
             </div>
         </section>
+		
+		<section class="section-card">
+			<a href="decrypt.html" style="text-decoration: none; color: inherit; display: block;">
+			<h2>🔓 C. XOR 解密密文</h2>
+			<p>ASCON 是 XOR-based</p>
+			<div class="note-box">
+				<p>加密時：C = P ⊕ S</p>
+				<p>因此解密：P = C ⊕ S</p>
+				<p>因為：(P ⊕ S) ⊕ S = P</p>
+			</div>
+        </section>
 
         <section class="section-card">
-            <h2>🛡️ C. 鐵壁般的安全性機制</h2>
+            <h2>🛡️ D. 鐵壁般的安全性機制</h2>
             <div class="security-box">
                 <h3>解密時，驗證失敗絕對不能輸出明文！</h3>
                 <p>在 ASCON 的解密過程中，系統會先計算出標籤，並與夾帶的 Tag 進行比對。<strong>如果 Tag 不符，系統只會無情地回傳 `fail`，絕對不會交出任何解密到一半的明文。</strong></p>
