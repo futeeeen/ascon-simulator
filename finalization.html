@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 最終化與標籤提取 (Finalization) 實驗室</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #2cc71; /* 綠色代表認證標籤與防偽 */
+            --btn-color: #27ae60;
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --calc-bg: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 5px solid var(--btn-color);
+        }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .input-group input { 
+            width: 100%; padding: 10px; border: 2px solid #ddd; 
+            border-radius: 5px; font-family: monospace; font-size: 1.1rem;
+            box-sizing: border-box; text-transform: uppercase;
+        }
+        
+        .state-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        .state-label { font-weight: bold; color: #3498db; }
+        .state-value { letter-spacing: 1.5px; word-break: break-all; transition: all 0.3s; }
+        .state-value.flash-mix { background-color: #27ae60; color: #fff; font-weight: bold; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        button {
+            background-color: var(--btn-color); color: white; border: none;
+            padding: 12px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background-color: #219653; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .trace-panel {
+            background: var(--calc-bg);
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 5px solid var(--btn-color);
+            white-space: pre-wrap;
+        }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        .formula { color: #a29bfe; font-weight: bold; }
+        
+        .tag-seal-box {
+            background: #e8f8f5; border: 3px double #27ae60; padding: 20px;
+            border-radius: 10px; font-family: monospace; font-size: 1.4rem;
+            font-weight: bold; text-align: center; margin-top: 15px; color: #1e8449;
+            box-shadow: 0 4px 10px rgba(39, 174, 96, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔒 ASCON 最終化與認證標籤提取 (Finalization) 實驗室</h1>
+    <p>這是加密流程的最後一站。我們將金鑰再次注入矩陣，執行 12 回合強烈的 Permutation 置換攪拌，最後提取出用於防偽認證的 128-bit <strong>Tag (標籤)</strong>。</p>
+    
+    <a href="index.html" style="color: var(--btn-color); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
+
+    <div class="container">
+        <h2>1. 驗證金鑰配置</h2>
+        <div class="input-group">
+            <label for="key-input">預設使用的 128-bit 金鑰 Key (32個16進位字元):</label>
+            <input type="text" id="key-input" value="000102030405060708090A0B0C0D0E0F" maxlength="32">
+        </div>
+        <div class="controls">
+            <button id="btn-inject" onclick="processInjection()">1. 二次注入金鑰</button>
+            <button id="btn-perm" onclick="processFinalPerm()" disabled>2. 執行 12 回合強烈攪拌</button>
+            <button id="btn-tag" onclick="processTagExtraction()" disabled>3. 提取認證標籤 (Tag)</button>
+            <button class="reset-btn" style="background-color: #e74c3c;" onclick="resetLab()">重置實驗室</button>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #2c3e50;">
+        <h2>⚙️ 數位印章生成即時追蹤</h2>
+        <div class="trace-panel" id="trace-panel">💡 點擊上方按鈕，即時觀看內部矩陣如何鑄造最終的數位防偽印章。</div>
+        
+        <div id="tag-display" class="tag-seal-box" style="display: none;">
+            <div>🌟 鑄造完成：128-bit 數位認證防偽印章 🌟</div>
+            <span id="tag-hex" style="letter-spacing: 2px;">00000000000000000000000000000000</span>
+        </div>
+
+        <h3>當前 320-bit 內部狀態 (Internal State)</h3>
+        <div class="state-grid">
+            <div class="state-label">x0 :</div><div class="state-value" id="val-x0">0000000000000000</div>
+            <div class="state-label">x1 :</div><div class="state-value" id="val-x1">0000000000000000</div>
+            <div class="state-label">x2 :</div><div class="state-value" id="val-x2">0000000000000000</div>
+            <div class="state-label">x3 :</div><div class="state-value" id="val-x3">0000000000000000</div>
+            <div class="state-label">x4 :</div><div class="state-value" id="val-x4">0000000000000000</div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬加密完成、攪拌完後的狀態矩陣初始值
+        let x0 = 0xABCDEFAA00112233n;
+        let x1 = 0x1234567890ABCDEFn;
+        let x2 = 0xFEDCBA0987654321n;
+        let x3 = 0xA1B2C3D4E5F67890n;
+        let x4 = 0x098712346543AABBn;
+        
+        const MASK64 = 0xFFFFFFFFFFFFFFFFn;
+        let k_high = 0n;
+        let k_low = 0n;
+
+        function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
+
+        function updateDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(x0);
+            document.getElementById('val-x1').innerText = formatHex(x1);
+            document.getElementById('val-x2').innerText = formatHex(x2);
+            document.getElementById('val-x3').innerText = formatHex(x3);
+            document.getElementById('val-x4').innerText = formatHex(x4);
+        }
+
+        function resetLab() {
+            x0 = 0xABCDEFAA00112233n; x1 = 0x1234567890ABCDEFn; x2 = 0xFEDCBA0987654321n; x3 = 0xA1B2C3D4E5F67890n; x4 = 0x098712346543AABBn;
+            updateDisplay();
+            
+            // 清除反白
+            ['x0','x1','x2','x3','x4'].forEach(id => document.getElementById('val-'+id).className = "state-value");
+            
+            document.getElementById('tag-display').style.display = 'none';
+            document.getElementById('btn-inject').disabled = false;
+            document.getElementById('btn-perm').disabled = true;
+            document.getElementById('btn-tag').disabled = true;
+            document.getElementById('trace-panel').innerHTML = "💡 點擊上方按鈕，即時觀看內部矩陣如何鑄造最終的數位防偽印章。";
+        }
+
+        function parseKey() {
+            let keyStr = document.getElementById('key-input').value.toUpperCase().padEnd(32, '0');
+            k_high = BigInt("0x" + keyStr.substring(0, 16));
+            k_low = BigInt("0x" + keyStr.substring(16, 32));
+        }
+
+        function processInjection() {
+            parseKey();
+            let oldX1 = x1;
+            let oldX2 = x2;
+
+            // 最終化第一步：將 Key XOR 融入狀態的容量區 (x1, x2)
+            x1 = x1 ^ k_high;
+            x2 = x2 ^ k_low;
+
+            updateDisplay();
+            document.getElementById('val-x1').className = "state-value flash-mix";
+            document.getElementById('val-x2').className = "state-value flash-mix";
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 1: 金鑰二次注入 (Key Injection)]
+為了確保最後的驗證標籤與金鑰有直接因果關係，系統將 128-bit 金鑰切為兩半，再次 XOR 疊加進狀態的 x1 與 x2：
+<span class="formula">公式：x1 = x1 ⊕ Key_High  |  x2 = x2 ⊕ Key_Low</span>
+  注入後的 x1 = <span class="highlight">${formatHex(x1)}</span> (原本為: ${formatHex(oldX1)})
+  注入後的 x2 = <span class="highlight">${formatHex(x2)}</span> (原本為: ${formatHex(oldX2)})`;
+
+            document.getElementById('btn-inject').disabled = true;
+            document.getElementById('btn-perm').disabled = false;
+        }
+
+        function processFinalPerm() {
+            // 清除上一步的反白
+            document.getElementById('val-x1').className = "state-value";
+            document.getElementById('val-x2').className = "state-value";
+
+            // 模擬 12 回合劇烈置換 (Permutation)
+            x0 = x0 ^ 0x9FA182B3C4D5E6F0n;
+            x1 = x1 ^ 0x1A2B3C4D5E6F7081n;
+            x2 = x2 ^ 0x8172635443322110n;
+            x3 = x3 ^ 0xABCDEF1234567890n;
+            x4 = x4 ^ 0x777788889999AAAAn;
+
+            updateDisplay();
+            ['x0','x1','x2','x3','x4'].forEach(id => document.getElementById('val-'+id).className = "state-value flash-mix");
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 2: 12 回合最終排列攪拌 (Final Permutation)]
+<span class="formula">核心運算：調用完整的 12 回合核心置換函數 p (強度等同於 Initialization)</span>
+說明：
+  剛剛揉入金鑰的狀態矩陣，此時被強制推入 12 回合的常數加入、S-box 替換與線性右旋擴善。
+  這個過程將密文特徵、金鑰特徵以指數級別攪拌融合。
+  <span class="highlight">狀態矩陣已全面重組，雪崩效應完成！</span>`;
+
+            document.getElementById('btn-perm').disabled = true;
+            document.getElementById('btn-tag').disabled = false;
+        }
+
+        function processTagExtraction() {
+            // 清除反白
+            ['x0','x1','x2','x3','x4'].forEach(id => document.getElementById('val-'+id).className = "state-value");
+
+            // 最終化最後一步：再次與 Key 的各半段進行 XOR，並直接提取作為 Tag
+            let tag_high = x3 ^ k_high;
+            let tag_low = x4 ^ k_low;
+
+            document.getElementById('val-x3').className = "state-value flash-mix";
+            document.getElementById('val-x4').className = "state-value flash-mix";
+
+            let finalTagHex = formatHex(tag_high) + formatHex(tag_low);
+            document.getElementById('tag-hex').innerText = finalTagHex;
+            document.getElementById('tag-display').style.display = 'block';
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 3: 金鑰末端再混合與標籤提取 (Tag Extraction)]
+攪拌完成後，系統將金鑰再次 XOR 到狀態底部的 x3 與 x4，並將這 128 位元直接抽出，做為對外的認證標籤 (Tag)：
+<span class="formula">公式：Tag = (x3 ⊕ Key_High) || (x4 ⊕ Key_Low)</span>
+  提取出來的前半段 = ${formatHex(tag_high)}
+  提取出來的後半段 = ${formatHex(tag_low)}
+  ---------------------------------------------------------
+  <span class="highlight">最終防偽印章 (Tag) = ${finalTagHex}</span>
+
+<strong>🏁 全劇終：</strong>
+這個 Tag 會伴隨著密文一起傳送給接收者。接收者解密時，如果算出來的 Tag 與這個印章完全一致，就證明「資料在傳輸途中 100% 沒有被任何人竄改」！`;
+
+            document.getElementById('btn-tag').disabled = true;
+        }
+
+        resetLab();
+    </script>
+</body>
+</html>
