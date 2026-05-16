@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 輕量級密碼學互動模擬器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .state-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .state-word {
+            display: flex;
+            align-items: center;
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 5px solid #3498db;
+            transition: all 0.3s ease;
+        }
+        .state-word.changed {
+            background: #ffeaa7;
+            border-left-color: #f1c40f;
+            transform: scale(1.02);
+        }
+        .word-label {
+            width: 50px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .word-value {
+            font-family: monospace;
+            font-size: 1.1em;
+            letter-spacing: 1px;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .step-description {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f8f5;
+            border-left: 4px solid #1abc9c;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ASCON-AEAD128 互動模擬器</h1>
+	<a href="index.html" style="color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px;">← 返回 ASCON 介紹首頁</a>
+    <p>透過這個視覺化工具，了解 ASCON 的 320-bit 狀態如何經過初始化與排列函數 ($p_C, p_S, p_L$) 的更新。</p>
+
+    <div class="container">
+        <h2>1. 參數設定</h2>
+        <div class="input-group">
+            <label for="key">Key (16 bytes, Hex):</label>
+            <input type="text" id="key" value="000102030405060708090A0B0C0D0E0F">
+        </div>
+        <div class="input-group">
+            <label for="nonce">Nonce (16 bytes, Hex):</label>
+            <input type="text" id="nonce" value="00000000000000000000000000000001">
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>2. 狀態監控 (320-bit State)</h2>
+        <div class="controls">
+            <button id="btn-reset" onclick="resetState()">重置 (Reset)</button>
+            <button id="btn-next" onclick="nextStep()">下一步 (Next Step)</button>
+        </div>
+        
+        <div id="step-info" class="step-description">
+            <strong>目前階段：</strong> 等待初始化...
+        </div>
+
+        <div class="state-container">
+            <div class="state-word" id="s0-box"><div class="word-label">S0</div><div class="word-value" id="s0">0000000000000000</div></div>
+            <div class="state-word" id="s1-box"><div class="word-label">S1</div><div class="word-value" id="s1">0000000000000000</div></div>
+            <div class="state-word" id="s2-box"><div class="word-label">S2</div><div class="word-value" id="s2">0000000000000000</div></div>
+            <div class="state-word" id="s3-box"><div class="word-label">S3</div><div class="word-value" id="s3">0000000000000000</div></div>
+            <div class="state-word" id="s4-box"><div class="word-label">S4</div><div class="word-value" id="s4">0000000000000000</div></div>
+        </div>
+    </div>
+
+    <script>
+        // ASCON-AEAD128 的標準初始向量 IV
+        const IV = "00001000808C0001";
+        let currentStep = 0;
+
+        function updateUI(s0, s1, s2, s3, s4, changedBoxes, description) {
+            document.getElementById('s0').innerText = s0;
+            document.getElementById('s1').innerText = s1;
+            document.getElementById('s2').innerText = s2;
+            document.getElementById('s3').innerText = s3;
+            document.getElementById('s4').innerText = s4;
+
+            document.getElementById('step-info').innerHTML = `<strong>目前階段：</strong> ${description}`;
+
+            // 重置所有反白效果
+            ['s0', 's1', 's2', 's3', 's4'].forEach(id => {
+                document.getElementById(id + '-box').classList.remove('changed');
+            });
+
+            // 加入新的反白效果
+            changedBoxes.forEach(id => {
+                document.getElementById(id + '-box').classList.add('changed');
+            });
+        }
+
+        function resetState() {
+            currentStep = 0;
+            document.getElementById('btn-next').disabled = false;
+            updateUI("0000000000000000", "0000000000000000", "0000000000000000", "0000000000000000", "0000000000000000", [], "等待初始化...");
+        }
+
+        // 簡單的 Hex 混淆函數 (僅作視覺化模擬，非真實密碼學運算)
+        function mockMix(hexStr, mode) {
+            let result = "";
+            for(let i=0; i<hexStr.length; i++) {
+                let val = parseInt(hexStr[i], 16);
+                if (mode === 'pC') val ^= 0xF; 
+                else if (mode === 'pS') val = (val + 7) % 16; 
+                else if (mode === 'pL') val = (val << 1 | val >> 3) & 0xF; 
+                result += val.toString(16).toUpperCase();
+            }
+            return result;
+        }
+
+        function nextStep() {
+            const key = document.getElementById('key').value.toUpperCase();
+            const nonce = document.getElementById('nonce').value.toUpperCase();
+            
+            let s0 = document.getElementById('s0').innerText;
+            let s1 = document.getElementById('s1').innerText;
+            let s2 = document.getElementById('s2').innerText;
+            let s3 = document.getElementById('s3').innerText;
+            let s4 = document.getElementById('s4').innerText;
+
+            if (currentStep === 0) {
+                // 初始化階段: S = IV || Key || Nonce
+                updateUI(IV, key.substring(0, 16), key.substring(16, 32), nonce.substring(0, 16), nonce.substring(16, 32), 
+                ['s0', 's1', 's2', 's3', 's4'], "狀態初始化。S0 載入 IV，S1/S2 載入 Key，S3/S4 載入 Nonce。");
+            } 
+            else if (currentStep === 1) {
+                // 常數加入層 pC: S2 = S2 XOR c_i
+                let newS2 = mockMix(s2, 'pC');
+                updateUI(s0, s1, newS2, s3, s4, ['s2'], "常數加入層 (pC)。將 Round Constant XOR 到 S2，破壞對稱性。");
+            }
+            else if (currentStep === 2) {
+                // 替換層 pS: 使用 5-bit S-box
+                updateUI(mockMix(s0, 'pS'), mockMix(s1, 'pS'), mockMix(s2, 'pS'), mockMix(s3, 'pS'), mockMix(s4, 'pS'), 
+                ['s0', 's1', 's2', 's3', 's4'], "替換層 (pS)。S0~S4 的每一行(column)都通過 5-bit S-box 產生非線性變化。");
+            }
+            else if (currentStep === 3) {
+                // 線性擴散層 pL: 旋轉與 XOR
+                updateUI(mockMix(s0, 'pL'), mockMix(s1, 'pL'), mockMix(s2, 'pL'), mockMix(s3, 'pL'), mockMix(s4, 'pL'), 
+                ['s0', 's1', 's2', 's3', 's4'], "線性擴散層 (pL)。每個 64-bit 字組分別進行內部旋轉與 XOR，提供擴散效應 (Diffusion)。");
+                document.getElementById('btn-next').disabled = true;
+                document.getElementById('step-info').innerHTML += " <strong>(單輪模擬完成)</strong>";
+            }
+            currentStep++;
+        }
+    </script>
+</body>
+</html>

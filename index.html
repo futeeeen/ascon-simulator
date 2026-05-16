@@ -3,217 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASCON 輕量級密碼學互動模擬器</title>
+    <title>探索 ASCON 輕量級密碼學</title>
     <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
+            line-height: 1.6;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
         }
-        h1, h2 {
-            color: #2c3e50;
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
         }
+        header h1 { margin: 0 0 1rem 0; font-size: 2.5rem; }
+        header p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+        
         .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        .section-card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border-top: 5px solid var(--secondary);
         }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        .state-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .state-word {
+        h2 {
+            color: var(--primary);
             display: flex;
             align-items: center;
-            background: #ecf0f1;
-            padding: 10px;
-            border-radius: 4px;
-            border-left: 5px solid #3498db;
-            transition: all 0.3s ease;
-        }
-        .state-word.changed {
-            background: #ffeaa7;
-            border-left-color: #f1c40f;
-            transform: scale(1.02);
-        }
-        .word-label {
-            width: 50px;
-            font-weight: bold;
-            color: #2980b9;
-        }
-        .word-value {
-            font-family: monospace;
-            font-size: 1.1em;
-            letter-spacing: 1px;
-        }
-        .controls {
-            margin-top: 20px;
-            display: flex;
             gap: 10px;
+            margin-top: 0;
         }
-        button {
-            background-color: #3498db;
+        
+        /* 家族成員區塊 */
+        .family-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .member-card {
+            background: #fdfefe;
+            border: 1px solid #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary);
+        }
+        .member-card h3 { margin-top: 0; color: var(--secondary); }
+        .note-box {
+            background: #fff3cd;
+            border-left: 4px solid #f1c40f;
+            padding: 1rem 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* 流程圖區塊 */
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin: 2rem 0;
+        }
+        .flow-step {
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 1.2rem;
+            width: 85%;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        .flow-step:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .flow-step::after {
+            content: '↓';
+            display: block;
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8rem;
+            color: #95a5a6;
+        }
+        .flow-step:last-child::after { content: none; }
+        .step-title { font-weight: bold; color: var(--primary); font-size: 1.1rem; margin-bottom: 0.5rem; }
+        
+        /* 安全性區塊 */
+        .security-box {
+            background: #fdedec;
+            border: 1px solid #fadbd8;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .security-box h3 { color: var(--accent); margin-top: 0; }
+        
+        /* 連結按鈕 */
+        .cta-container { text-align: center; margin: 3rem 0; }
+        .btn {
+            display: inline-block;
+            background: var(--secondary);
             color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
         }
-        button:hover {
-            background-color: #2980b9;
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
         }
-        button:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
-        }
-        .step-description {
-            margin-top: 15px;
-            padding: 15px;
-            background: #e8f8f5;
-            border-left: 4px solid #1abc9c;
-            border-radius: 4px;
+
+        @media (max-width: 600px) {
+            .flow-step { width: 100%; box-sizing: border-box; }
+            .section-card { padding: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
-    <h1>ASCON-AEAD128 互動模擬器</h1>
-    <p>透過這個視覺化工具，了解 ASCON 的 320-bit 狀態如何經過初始化與排列函數 ($p_C, p_S, p_L$) 的更新。</p>
+    <header>
+        <h1>解密 ASCON 演算法</h1>
+        <p>為物聯網與資源受限裝置而生的新世代輕量級密碼學標準</p>
+    </header>
 
     <div class="container">
-        <h2>1. 參數設定</h2>
-        <div class="input-group">
-            <label for="key">Key (16 bytes, Hex):</label>
-            <input type="text" id="key" value="000102030405060708090A0B0C0D0E0F">
-        </div>
-        <div class="input-group">
-            <label for="nonce">Nonce (16 bytes, Hex):</label>
-            <input type="text" id="nonce" value="00000000000000000000000000000001">
-        </div>
-    </div>
-
-    <div class="container">
-        <h2>2. 狀態監控 (320-bit State)</h2>
-        <div class="controls">
-            <button id="btn-reset" onclick="resetState()">重置 (Reset)</button>
-            <button id="btn-next" onclick="nextStep()">下一步 (Next Step)</button>
-        </div>
         
-        <div id="step-info" class="step-description">
-            <strong>目前階段：</strong> 等待初始化...
-        </div>
+        <section class="section-card">
+            <h2>📦 A. ASCON 家族核心成員</h2>
+            <p>ASCON 並非單一演算法，而是一個密碼學套件家族，對應不同的安全需求：</p>
+            <div class="family-grid">
+                <div class="member-card">
+                    <h3>Ascon-AEAD128</h3>
+                    <p><strong>主打：</strong> 認證加密 (Authenticated Encryption)</p>
+                    <p><strong>規格：</strong> 128-bit 金鑰與安全強度。</p>
+                    <p><strong>特色：</strong> 同時保障資料的「機密性」與「完整性」，是物聯網通訊防護的首選。</p>
+                </div>
+                <div class="member-card">
+                    <h3>Ascon-Hash256</h3>
+                    <p><strong>主打：</strong> 資料完整性 (Hashing)</p>
+                    <p><strong>規格：</strong> 產生 256-bit 的固定長度輸出。</p>
+                    <p><strong>特色：</strong> 適用於韌體更新驗證、數位簽章等不需解密的場景。</p>
+                </div>
+            </div>
+            <div class="note-box">
+                <strong>💡 核心共通點筆記：</strong><br>
+                無論是 AEAD 還是 Hash，它們底層都共用了極其相似的<strong>海綿結構 (Sponge Construction)</strong> 與 <strong>320-bit 核心排列函數 (Ascon-p)</strong>。這意味著在晶片硬體實作時，這兩種功能可以「共用同一套電路」，大幅節省硬體面積與耗電量！
+            </div>
+        </section>
 
-        <div class="state-container">
-            <div class="state-word" id="s0-box"><div class="word-label">S0</div><div class="word-value" id="s0">0000000000000000</div></div>
-            <div class="state-word" id="s1-box"><div class="word-label">S1</div><div class="word-value" id="s1">0000000000000000</div></div>
-            <div class="state-word" id="s2-box"><div class="word-label">S2</div><div class="word-value" id="s2">0000000000000000</div></div>
-            <div class="state-word" id="s3-box"><div class="word-label">S3</div><div class="word-value" id="s3">0000000000000000</div></div>
-            <div class="state-word" id="s4-box"><div class="word-label">S4</div><div class="word-value" id="s4">0000000000000000</div></div>
-        </div>
-    </div>
-
-    <script>
-        // ASCON-AEAD128 的標準初始向量 IV
-        const IV = "00001000808C0001";
-        let currentStep = 0;
-
-        function updateUI(s0, s1, s2, s3, s4, changedBoxes, description) {
-            document.getElementById('s0').innerText = s0;
-            document.getElementById('s1').innerText = s1;
-            document.getElementById('s2').innerText = s2;
-            document.getElementById('s3').innerText = s3;
-            document.getElementById('s4').innerText = s4;
-
-            document.getElementById('step-info').innerHTML = `<strong>目前階段：</strong> ${description}`;
-
-            // 重置所有反白效果
-            ['s0', 's1', 's2', 's3', 's4'].forEach(id => {
-                document.getElementById(id + '-box').classList.remove('changed');
-            });
-
-            // 加入新的反白效果
-            changedBoxes.forEach(id => {
-                document.getElementById(id + '-box').classList.add('changed');
-            });
-        }
-
-        function resetState() {
-            currentStep = 0;
-            document.getElementById('btn-next').disabled = false;
-            updateUI("0000000000000000", "0000000000000000", "0000000000000000", "0000000000000000", "0000000000000000", [], "等待初始化...");
-        }
-
-        // 簡單的 Hex 混淆函數 (僅作視覺化模擬，非真實密碼學運算)
-        function mockMix(hexStr, mode) {
-            let result = "";
-            for(let i=0; i<hexStr.length; i++) {
-                let val = parseInt(hexStr[i], 16);
-                if (mode === 'pC') val ^= 0xF; 
-                else if (mode === 'pS') val = (val + 7) % 16; 
-                else if (mode === 'pL') val = (val << 1 | val >> 3) & 0xF; 
-                result += val.toString(16).toUpperCase();
-            }
-            return result;
-        }
-
-        function nextStep() {
-            const key = document.getElementById('key').value.toUpperCase();
-            const nonce = document.getElementById('nonce').value.toUpperCase();
+        <section class="section-card">
+            <h2>🔄 B. ASCON-AEAD 加密流程解析</h2>
+            <p>ASCON-AEAD 的運作就像是一條極具效率的輸送帶，資料只需通過一次 (Single-pass) 即可完成加密與認證：</p>
             
-            let s0 = document.getElementById('s0').innerText;
-            let s1 = document.getElementById('s1').innerText;
-            let s2 = document.getElementById('s2').innerText;
-            let s3 = document.getElementById('s3').innerText;
-            let s4 = document.getElementById('s4').innerText;
+            <div class="flowchart">
+                <div class="flow-step">
+                    <div class="step-title">1. Initialization (初始化)</div>
+                    <p>將 <strong>Key (金鑰)</strong>、<strong>Nonce (絕對不重複的隨機數)</strong> 與 IV 寫入 320-bit 的內部狀態中。接著透過排列函數劇烈攪拌，建立不可預測的初始防護罩。</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-title">2. Associated Data (關聯資料吸收)</div>
+                    <p>處理封包表頭 (Header) 等「不需加密、但防竄改」的資料。將其 XOR 融入狀態中，最後加入一個 Domain Separation Bit，用來明確區分接下來的階段。</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-title">3. Plaintext / Ciphertext (明文處理)</div>
+                    <p>將機密的 <strong>Plaintext (明文)</strong> 與內部狀態進行 XOR 運算，直接產生 <strong>Ciphertext (密文)</strong>。每處理一個區塊，就再次呼叫排列函數更新狀態，確保前後文關聯。</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-title">4. Finalization (最終化)</div>
+                    <p>再次將 Key (金鑰) 注入狀態中做最後的強烈攪拌，並提取出 128-bit 的 <strong>Tag (認證標籤)</strong>。這個 Tag 就是整份訊息的數位防偽印章。</p>
+                </div>
+            </div>
+        </section>
 
-            if (currentStep === 0) {
-                // 初始化階段: S = IV || Key || Nonce
-                updateUI(IV, key.substring(0, 16), key.substring(16, 32), nonce.substring(0, 16), nonce.substring(16, 32), 
-                ['s0', 's1', 's2', 's3', 's4'], "狀態初始化。S0 載入 IV，S1/S2 載入 Key，S3/S4 載入 Nonce。");
-            } 
-            else if (currentStep === 1) {
-                // 常數加入層 pC: S2 = S2 XOR c_i
-                let newS2 = mockMix(s2, 'pC');
-                updateUI(s0, s1, newS2, s3, s4, ['s2'], "常數加入層 (pC)。將 Round Constant XOR 到 S2，破壞對稱性。");
-            }
-            else if (currentStep === 2) {
-                // 替換層 pS: 使用 5-bit S-box
-                updateUI(mockMix(s0, 'pS'), mockMix(s1, 'pS'), mockMix(s2, 'pS'), mockMix(s3, 'pS'), mockMix(s4, 'pS'), 
-                ['s0', 's1', 's2', 's3', 's4'], "替換層 (pS)。S0~S4 的每一行(column)都通過 5-bit S-box 產生非線性變化。");
-            }
-            else if (currentStep === 3) {
-                // 線性擴散層 pL: 旋轉與 XOR
-                updateUI(mockMix(s0, 'pL'), mockMix(s1, 'pL'), mockMix(s2, 'pL'), mockMix(s3, 'pL'), mockMix(s4, 'pL'), 
-                ['s0', 's1', 's2', 's3', 's4'], "線性擴散層 (pL)。每個 64-bit 字組分別進行內部旋轉與 XOR，提供擴散效應 (Diffusion)。");
-                document.getElementById('btn-next').disabled = true;
-                document.getElementById('step-info').innerHTML += " <strong>(單輪模擬完成)</strong>";
-            }
-            currentStep++;
-        }
-    </script>
+        <section class="section-card">
+            <h2>🛡️ C. 鐵壁般的安全性機制</h2>
+            <div class="security-box">
+                <h3>解密時，驗證失敗絕對不能輸出明文！</h3>
+                <p>在 ASCON 的解密過程中，系統會先計算出標籤，並與夾帶的 Tag 進行比對。<strong>如果 Tag 不符，系統只會無情地回傳 `fail`，絕對不會交出任何解密到一半的明文。</strong></p>
+                
+                <hr style="border: 0; border-top: 1px dashed #fadbd8; margin: 15px 0;">
+                
+                <p><strong>🧠 秒懂比喻：毒藥膠囊與機密保險箱</strong></p>
+                <p>想像一個裝有機密文件的智慧保險箱。開啟它的條件是必須核對一組「超長指紋特徵 (Tag)」。</p>
+                <p>如果今天駭客隨便輸入錯誤的指紋，保險箱如果選擇「門開一條縫，讓你看一眼裡面模糊的文件，然後再關上說密碼錯誤」，駭客就可以透過無數次故意輸入錯誤指紋，觀察那「一條縫」裡的變化，慢慢拼湊出完整機密（這在密碼學中稱為 <em>Padding Oracle Attack 選擇密文攻擊</em>）。</p>
+                <p>因此，ASCON 的設計就像是內部裝了毒藥膠囊的保險箱：<strong>只要指紋 (Tag) 不對，裡面的文件瞬間銷毀，連一點紙屑都不留給你。</strong>100% 驗證通過才給看，是保護機密的第一鐵則！</p>
+            </div>
+        </section>
+
+        <div class="cta-container">
+            <a href="simulator.html" class="btn">🚀 前往 ASCON 狀態視覺互動模擬器</a>
+            <p style="margin-top: 10px; color: #7f8c8d; font-size: 0.9rem;">動手調整參數，觀察 320-bit 狀態的實際變化</p>
+        </div>
+
+    </div>
 </body>
 </html>
