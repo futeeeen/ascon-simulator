@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 排列函數 (Permutation) 核心解密</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #8e44ad;
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --highlight: #f1c40f;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 5px solid var(--secondary);
+        }
+        .state-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        .state-label { font-weight: bold; color: #3498db; }
+        .state-value { letter-spacing: 1.5px; word-break: break-all; }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.1s;
+        }
+        button:hover { background-color: #732d91; transform: translateY(-2px); }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+        button.reset-btn { background-color: #e74c3c; }
+        button.reset-btn:hover { background-color: #c0392b; }
+
+        .logic-panel {
+            background: #fdfefe;
+            border: 1px solid #dcdde1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: monospace;
+            display: none;
+        }
+        .logic-panel h3 { margin-top: 0; color: #c0392b; }
+        .code-block {
+            background: #f8f9fa;
+            padding: 10px;
+            border-left: 4px solid #c0392b;
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
+        .info-text { margin-top: 15px; padding: 10px; background: #e8f8f5; border-radius: 5px; border-left: 4px solid #1abc9c;}
+    </style>
+</head>
+<body>
+
+    <h1>🧠 ASCON 排列函數 (Permutation) 實驗室</h1>
+    <p>這裡展示了 ASCON 核心狀態 (320-bit) 在單一回合 (Round) 中的真實數學運算。特別注意 S-box 是如何完全依靠布林邏輯來完成的。</p>
+    
+    <a href="index.html" style="color: #8e44ad; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
+
+    <div class="container">
+        <h2>內部狀態 (Internal State)</h2>
+        <div class="state-grid" id="stateDisplay">
+            <div class="state-label">x0 :</div><div class="state-value" id="val-x0">0000000000000000</div>
+            <div class="state-label">x1 :</div><div class="state-value" id="val-x1">0000000000000000</div>
+            <div class="state-label">x2 :</div><div class="state-value" id="val-x2">0000000000000000</div>
+            <div class="state-label">x3 :</div><div class="state-value" id="val-x3">0000000000000000</div>
+            <div class="state-label">x4 :</div><div class="state-value" id="val-x4">0000000000000000</div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-pc" onclick="runPc()">1. 常數加入層 (p_C)</button>
+            <button id="btn-ps" onclick="runPs()" disabled>2. 替換層 (p_S)</button>
+            <button id="btn-pl" onclick="runPl()" disabled>3. 線性擴散層 (p_L)</button>
+            <button class="reset-btn" onclick="resetState()">重置狀態</button>
+        </div>
+
+        <div id="info-panel" class="info-text">
+            <strong>等待操作：</strong> 請依序點擊上方按鈕，觀察狀態變化。
+        </div>
+
+        <div id="logic-panel" class="logic-panel">
+            <h3>Bitsliced S-box 布林邏輯 (C 語言風格)</h3>
+            <p>這就是 ASCON 不需要查表，僅靠 XOR (^)、AND (&) 與 NOT (~) 就完成非線性替換的秘密：</p>
+            <div class="code-block" id="logic-code">
+x0 ^= x4;    x4 ^= x3;    x2 ^= x1;
+t0  = (~x0) & x1;
+t1  = (~x1) & x2;
+t2  = (~x2) & x3;
+t3  = (~x3) & x4;
+t4  = (~x4) & x0;
+x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
+x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2  = ~x2;
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 使用 BigInt 來處理 64-bit 運算
+        let x0 = 0x0011223344556677n; // 測試用初始值
+        let x1 = 0x8899aabbccddeeffn;
+        let x2 = 0x0102030405060708n;
+        let x3 = 0x090a0b0c0d0e0f00n;
+        let x4 = 0x1020304050607080n;
+
+        const MASK64 = 0xFFFFFFFFFFFFFFFFn;
+        const ROUND_CONSTANT = 0x00000000000000f0n; // 假設第一輪的常數
+
+        function formatHex(val) {
+            return val.toString(16).padStart(16, '0').toUpperCase();
+        }
+
+        function updateDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(x0);
+            document.getElementById('val-x1').innerText = formatHex(x1);
+            document.getElementById('val-x2').innerText = formatHex(x2);
+            document.getElementById('val-x3').innerText = formatHex(x3);
+            document.getElementById('val-x4').innerText = formatHex(x4);
+        }
+
+        function resetState() {
+            x0 = 0x0011223344556677n;
+            x1 = 0x8899aabbccddeeffn;
+            x2 = 0x0102030405060708n;
+            x3 = 0x090a0b0c0d0e0f00n;
+            x4 = 0x1020304050607080n;
+            updateDisplay();
+            
+            document.getElementById('btn-pc').disabled = false;
+            document.getElementById('btn-ps').disabled = true;
+            document.getElementById('btn-pl').disabled = true;
+            document.getElementById('logic-panel').style.display = 'none';
+            document.getElementById('info-panel').innerHTML = "<strong>狀態已重置：</strong> 載入了測試用的初始值。";
+        }
+
+        function runPc() {
+            // p_C: 將回合常數 XOR 到 x2
+            x2 = (x2 ^ ROUND_CONSTANT) & MASK64;
+            updateDisplay();
+            
+            document.getElementById('btn-pc').disabled = true;
+            document.getElementById('btn-ps').disabled = false;
+            document.getElementById('info-panel').innerHTML = `<strong>1. 常數加入 (p_C) 完成：</strong> 將回合常數 (${formatHex(ROUND_CONSTANT)}) XOR 加到了 x2 中，用來破壞輪與輪之間的對稱性。`;
+        }
+
+        function runPs() {
+            // p_S: 5-bit S-box (Bitsliced Boolean Logic)
+            // 完全重現 ASCON 官方 C 實作的邏輯
+            x0 ^= x4; x4 ^= x3; x2 ^= x1;
+            
+            let t0 = (~x0 & MASK64) & x1;
+            let t1 = (~x1 & MASK64) & x2;
+            let t2 = (~x2 & MASK64) & x3;
+            let t3 = (~x3 & MASK64) & x4;
+            let t4 = (~x4 & MASK64) & x0;
+            
+            x0 ^= t1; x1 ^= t2; x2 ^= t3; x3 ^= t4; x4 ^= t0;
+            x1 ^= x0; x0 ^= x4; x3 ^= x2; x2 = (~x2 & MASK64);
+
+            updateDisplay();
+            
+            document.getElementById('btn-ps').disabled = true;
+            document.getElementById('btn-pl').disabled = false;
+            document.getElementById('logic-panel').style.display = 'block';
+            document.getElementById('info-panel').innerHTML = "<strong>2. 替換層 (p_S) 完成：</strong> 這是 ASCON 的核心防護！注意看下方的布林邏輯公式，所有的 64-bit 欄位同時平行通過了非線性的 S-box。";
+        }
+
+        function rotr(x, n) {
+            return ((x >> n) | (x << (64n - n))) & MASK64;
+        }
+
+        function runPl() {
+            // p_L: 線性擴散層 (旋轉與 XOR)
+            x0 ^= rotr(x0, 19n) ^ rotr(x0, 28n);
+            x1 ^= rotr(x1, 61n) ^ rotr(x1, 39n);
+            x2 ^= rotr(x2,  1n) ^ rotr(x2,  6n);
+            x3 ^= rotr(x3, 10n) ^ rotr(x3, 17n);
+            x4 ^= rotr(x4,  7n) ^ rotr(x4, 41n);
+
+            updateDisplay();
+            
+            document.getElementById('btn-pl').disabled = true;
+            document.getElementById('info-panel').innerHTML = "<strong>3. 線性擴散層 (p_L) 完成：</strong> 透過位元右旋 (Right Rotation) 與 XOR，讓單一位元的改變能迅速擴散 (Diffusion) 到整個 320-bit 狀態中。一回合結束！";
+        }
+
+        // 初始化顯示
+        resetState();
+    </script>
+</body>
+</html>
