@@ -200,11 +200,9 @@
             <p>ASCON-AEAD 的運作就像是一條極具效率的輸送帶，資料只需通過一次 (Single-pass) 即可完成加密與認證：</p>
             
             <div class="flowchart">
-				<a href="init.html" style="text-decoration: none; color: inherit; display: block; width: 100%;">
-					<div class="flow-step">
-						<div class="step-title">1. Initialization (初始化)</div>
-						<p>將 <strong>Key (金鑰)</strong>、<strong>Nonce (絕對不重複的隨機數)</strong> 與 IV 寫入 320-bit 的內部狀態中。接著透過排列函數劇烈攪拌，建立不可預測的初始防護罩。</p>
-					</div>
+				<a href="init.html" class="flow-step" style="text-decoration: none; color: inherit; display: block;">
+					<div class="step-title">1. Initialization (初始化)</div>
+					<p>將 <strong>Key (金鑰)</strong>、<strong>Nonce (絕對不重複的隨機數)</strong> 與 IV 寫入 320-bit 的內部狀態中。接著透過排列函數劇烈攪拌，建立不可預測的初始防護罩。</p>
 				</a>
                 <div class="flow-step">
                     <div class="step-title">2. Associated Data (關聯資料吸收)</div>
