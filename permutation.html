@@ -10,8 +10,8 @@
             --secondary: #8e44ad;
             --bg-light: #f4f7f6;
             --text-dark: #333;
-            --bit-1: #f1c40f; /* 亮黃色代表 1 */
-            --bit-0: #34495e; /* 暗藍色代表 0 */
+            --bit-1: #f1c40f; 
+            --bit-0: #34495e; 
             --calc-bg: #2c3e50;
         }
         body {
@@ -33,7 +33,6 @@
             border-top: 5px solid var(--secondary);
         }
         
-        /* 64-bit 模擬器樣式 */
         .state-grid {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -60,7 +59,6 @@
         button.reset-btn:hover { background-color: #c0392b; }
         .info-text { margin-top: 15px; padding: 15px; background: #e8f8f5; border-radius: 5px; border-left: 4px solid #1abc9c;}
 
-        /* 5-bit 互動 S-box 樣式 */
         .sbox-lab { background: #fdfefe; border: 1px solid #dcdde1; padding: 20px; border-radius: 8px; }
         .bit-container { display: flex; gap: 10px; margin-bottom: 15px; align-items: center;}
         .bit-box {
@@ -82,7 +80,6 @@
         .arrow-down { text-align: center; font-size: 1.5rem; color: #bdc3c7; margin: 10px 0; }
         .final-output { border-left-color: #27ae60; background: #eafaf1; }
 
-        /* 計算解析面版 */
         .calc-panel {
             background: var(--calc-bg);
             color: #ecf0f1;
@@ -110,9 +107,7 @@
     <div class="container">
         <h2>🔬 第一部分：320-bit 狀態巨觀變化 (單一 Round)</h2>
         
-        <div class="calc-panel" id="macro-trace-panel">
-💡 <strong>巨觀步驟詳解儀：</strong>請點擊下方的功能按鈕，此處將會解密 64-bit 字組在該階段所套用的精確密碼學數學公式。
-        </div>
+        <div class="calc-panel" id="macro-trace-panel">💡 <strong>巨觀步驟詳解儀：</strong>請點擊下方的功能按鈕，此處將會解密 64-bit 字組在該階段所套用的精確密碼學數學公式。</div>
 
         <div class="state-grid" id="stateDisplay">
             <div class="state-label">x0 :</div><div class="state-value" id="val-x0">0000000000000000</div>
@@ -134,9 +129,7 @@
         <h2>🔍 第二部分：5-bit Bitsliced S-box 微觀邏輯實驗室</h2>
         <p>點擊左側「輸入位元」來改變初始值。<strong>👉 點擊右側運算過程中的任何一個位元方塊，上方解析儀就會顯示它的計算過程！</strong></p>
 
-        <div class="calc-panel" id="calc-panel">
-點擊右側運算過程中的方塊，這裡將會顯示詳細的布林邏輯算式...
-        </div>
+        <div class="calc-panel" id="calc-panel">點擊右側運算過程中的方塊，這裡將會顯示詳細的布林邏輯算式...</div>
 
         <div class="sbox-lab">
             <div style="display: flex; flex-wrap: wrap; gap: 30px;">
@@ -183,20 +176,30 @@
         // ==========================================
         // 第一部分：64-bit 巨觀模擬器邏輯
         // ==========================================
-        let bx0 = 0x0011223344556677n, bx1 = 0x8899aabbccddeeffn, bx2 = 0x0102030405060708n, bx3 = 0x090a0b0c0d0e0f00n, bx4 = 0x1020304050607080n;
-        const MASK64 = 0xFFFFFFFFFFFFFFFFn, ROUND_CONSTANT = 0x00000000000000f0n;
+        let bx0 = 0x0011223344556677n;
+        let bx1 = 0x8899aabbccddeeffn;
+        let bx2 = 0x0102030405060708n;
+        let bx3 = 0x090a0b0c0d0e0f00n;
+        let bx4 = 0x1020304050607080n;
+        const MASK64 = 0xFFFFFFFFFFFFFFFFn;
+        const ROUND_CONSTANT = 0x00000000000000f0n;
         
         function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
         
         function updateBigDisplay() {
-            document.getElementById('val-x0').innerText = formatHex(bx0); document.getElementById('val-x1').innerText = formatHex(bx1);
-            document.getElementById('val-x2').innerText = formatHex(bx2); document.getElementById('val-x3').innerText = formatHex(bx3); document.getElementById('val-x4').innerText = formatHex(bx4);
+            document.getElementById('val-x0').innerText = formatHex(bx0); 
+            document.getElementById('val-x1').innerText = formatHex(bx1);
+            document.getElementById('val-x2').innerText = formatHex(bx2); 
+            document.getElementById('val-x3').innerText = formatHex(bx3); 
+            document.getElementById('val-x4').innerText = formatHex(bx4);
         }
         
         function resetState() {
             bx0 = 0x0011223344556677n; bx1 = 0x8899aabbccddeeffn; bx2 = 0x0102030405060708n; bx3 = 0x090a0b0c0d0e0f00n; bx4 = 0x1020304050607080n;
             updateBigDisplay(); 
-            document.getElementById('btn-pc').disabled = false; document.getElementById('btn-ps').disabled = true; document.getElementById('btn-pl').disabled = true;
+            document.getElementById('btn-pc').disabled = false; 
+            document.getElementById('btn-ps').disabled = true; 
+            document.getElementById('btn-pl').disabled = true;
             document.getElementById('macro-trace-panel').innerHTML = `💡 <strong>巨觀步驟詳解儀：</strong>請點擊下方的功能按鈕，此處將會解密 64-bit 字組在該階段所套用的精確密碼學數學公式。`;
             document.getElementById('info-panel').innerHTML = "<strong>狀態已重置：</strong> 載入了測試用的初始值。";
         }
@@ -205,9 +208,9 @@
             let oldX2 = bx2;
             bx2 = (bx2 ^ ROUND_CONSTANT) & MASK64;
             updateBigDisplay();
-            document.getElementById('btn-pc').disabled = true; document.getElementById('btn-ps').disabled = false;
+            document.getElementById('btn-pc').disabled = true; 
+            document.getElementById('btn-ps').disabled = false;
             
-            // 巨觀追蹤公式輸出
             document.getElementById('macro-trace-panel').innerHTML = 
 `[Stage 1: 常數加入層 p_C解析]
 <span class="formula">公式：x2 = x2 ⊕ Round_Constant</span>
@@ -221,11 +224,21 @@
         }
         
         function runPs() {
+            // 已修復語法錯誤
             bx0 ^= bx4; bx4 ^= bx3; bx2 ^= bx1;
-            let t0 = (~bx0 & MASK64) & bx1, t1 = (~bx1 & MASK64) & bx2, t2 = (~bx2 & MASK64) & bx3, t3 = (~bx3 & MASK64) & bx4, t4 = (~bx4 & MASK64) & base_x0 = bx0;
-            bx0 ^= t1; bx1 ^= t2; bx2 ^= t3; bx3 ^= t4; bx4 ^= t0; bx1 ^= bx0; bx0 ^= bx4; bx3 ^= bx2; bx2 = (~bx2 & MASK64);
+            
+            let t0 = (~bx0 & MASK64) & bx1;
+            let t1 = (~bx1 & MASK64) & bx2;
+            let t2 = (~bx2 & MASK64) & bx3;
+            let t3 = (~bx3 & MASK64) & bx4;
+            let t4 = (~bx4 & MASK64) & bx0; 
+            
+            bx0 ^= t1; bx1 ^= t2; bx2 ^= t3; bx3 ^= t4; bx4 ^= t0; 
+            bx1 ^= bx0; bx0 ^= bx4; bx3 ^= bx2; bx2 = (~bx2 & MASK64);
+            
             updateBigDisplay();
-            document.getElementById('btn-ps').disabled = true; document.getElementById('btn-pl').disabled = false;
+            document.getElementById('btn-ps').disabled = true; 
+            document.getElementById('btn-pl').disabled = false;
             
             document.getElementById('macro-trace-panel').innerHTML = 
 `[Stage 2: 替換層 p_S 解析]
@@ -240,9 +253,12 @@
         function rotr(x, n) { return ((x >> n) | (x << (64n - n))) & MASK64; }
         
         function runPl() {
-            let old = [bx0, bx1, bx2, bx3, bx4];
-            bx0 ^= rotr(bx0, 19n) ^ rotr(bx0, 28n); bx1 ^= rotr(bx1, 61n) ^ rotr(bx1, 39n); bx2 ^= rotr(bx2,  1n) ^ rotr(bx2,  6n);
-            bx3 ^= rotr(bx3, 10n) ^ rotr(bx3, 17n); bx4 ^= rotr(bx4,  7n) ^ rotr(bx4, 41n);
+            bx0 ^= rotr(bx0, 19n) ^ rotr(bx0, 28n); 
+            bx1 ^= rotr(bx1, 61n) ^ rotr(bx1, 39n); 
+            bx2 ^= rotr(bx2,  1n) ^ rotr(bx2,  6n);
+            bx3 ^= rotr(bx3, 10n) ^ rotr(bx3, 17n); 
+            bx4 ^= rotr(bx4,  7n) ^ rotr(bx4, 41n);
+            
             updateBigDisplay();
             document.getElementById('btn-pl').disabled = true;
             
@@ -281,7 +297,8 @@
         function updateSboxDisplay() {
             for(let i=0; i<5; i++) {
                 const el = document.getElementById(`in-x${i}`);
-                el.innerText = in_bits[i]; el.className = `bit-box interactive-bit val-${in_bits[i]}`;
+                el.innerText = in_bits[i]; 
+                el.className = `bit-box interactive-bit val-${in_bits[i]}`;
             }
             history.s0 = [...in_bits];
             let [x0, x1, x2, x3, x4] = in_bits;
@@ -331,6 +348,7 @@
             document.getElementById('calc-panel').innerHTML = exp;
         }
 
+        // 啟動初始化
         resetState();
         updateSboxDisplay();
     </script>
