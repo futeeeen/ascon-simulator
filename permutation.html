@@ -10,7 +10,8 @@
             --secondary: #8e44ad;
             --bg-light: #f4f7f6;
             --text-dark: #333;
-            --highlight: #f1c40f;
+            --bit-1: #f1c40f; /* 亮黃色代表 1 */
+            --bit-0: #34495e; /* 暗藍色代表 0 */
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,7 +22,7 @@
             padding: 20px;
             line-height: 1.6;
         }
-        h1, h2 { color: var(--primary); }
+        h1, h2, h3 { color: var(--primary); }
         .container {
             background: white;
             padding: 25px;
@@ -30,6 +31,8 @@
             margin-bottom: 25px;
             border-top: 5px solid var(--secondary);
         }
+        
+        /* 64-bit 模擬器樣式 */
         .state-grid {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -44,58 +47,51 @@
         }
         .state-label { font-weight: bold; color: #3498db; }
         .state-value { letter-spacing: 1.5px; word-break: break-all; }
-        
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
-        }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
         button {
-            background-color: var(--secondary);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: bold;
-            transition: background 0.3s, transform 0.1s;
+            background-color: var(--secondary); color: white; border: none;
+            padding: 12px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: background 0.3s, transform 0.1s;
         }
         button:hover { background-color: #732d91; transform: translateY(-2px); }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
         button.reset-btn { background-color: #e74c3c; }
         button.reset-btn:hover { background-color: #c0392b; }
-
-        .logic-panel {
-            background: #fdfefe;
-            border: 1px solid #dcdde1;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-family: monospace;
-            display: none;
-        }
-        .logic-panel h3 { margin-top: 0; color: #c0392b; }
-        .code-block {
-            background: #f8f9fa;
-            padding: 10px;
-            border-left: 4px solid #c0392b;
-            white-space: pre-wrap;
-            line-height: 1.4;
-        }
         .info-text { margin-top: 15px; padding: 10px; background: #e8f8f5; border-radius: 5px; border-left: 4px solid #1abc9c;}
+
+        /* 5-bit 互動 S-box 樣式 */
+        .sbox-lab { background: #fdfefe; border: 1px solid #dcdde1; padding: 20px; border-radius: 8px; }
+        .bit-container { display: flex; gap: 10px; margin-bottom: 15px; align-items: center;}
+        .bit-box {
+            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem; font-weight: bold; font-family: monospace; border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .bit-box.val-1 { background-color: var(--bit-1); color: #000; box-shadow: 0 0 10px rgba(241, 196, 15, 0.4); }
+        .bit-box.val-0 { background-color: var(--bit-0); color: #fff; }
+        .interactive-bit { cursor: pointer; border: 2px solid #bdc3c7; }
+        .interactive-bit:hover { transform: scale(1.1); }
+        
+        .step-row { 
+            background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px; 
+            border-left: 4px solid #95a5a6;
+        }
+        .step-title { font-family: monospace; font-weight: bold; color: #c0392b; margin-bottom: 10px; }
+        .bit-label { width: 30px; font-weight: bold; color: #7f8c8d; text-align: center; }
+        
+        .arrow-down { text-align: center; font-size: 1.5rem; color: #bdc3c7; margin: 10px 0; }
+        .final-output { border-left-color: #27ae60; background: #eafaf1; }
     </style>
 </head>
 <body>
 
     <h1>🧠 ASCON 排列函數 (Permutation) 實驗室</h1>
-    <p>這裡展示了 ASCON 核心狀態 (320-bit) 在單一回合 (Round) 中的真實數學運算。特別注意 S-box 是如何完全依靠布林邏輯來完成的。</p>
+    <p>這裡展示了 ASCON 核心狀態的數學運算。上半部是 320-bit 的巨觀變化，下半部則可親自操作 S-box 的微觀布林邏輯。</p>
     
     <a href="index.html" style="color: #8e44ad; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
 
     <div class="container">
-        <h2>內部狀態 (Internal State)</h2>
+        <h2>🔬 第一部分：320-bit 狀態巨觀變化 (單一 Round)</h2>
         <div class="state-grid" id="stateDisplay">
             <div class="state-label">x0 :</div><div class="state-value" id="val-x0">0000000000000000</div>
             <div class="state-label">x1 :</div><div class="state-value" id="val-x1">0000000000000000</div>
@@ -112,115 +108,169 @@
         </div>
 
         <div id="info-panel" class="info-text">
-            <strong>等待操作：</strong> 請依序點擊上方按鈕，觀察狀態變化。
+            <strong>等待操作：</strong> 請依序點擊上方按鈕，觀察 64-bit 十六進位狀態變化。
         </div>
+    </div>
 
-        <div id="logic-panel" class="logic-panel">
-            <h3>Bitsliced S-box 布林邏輯 (C 語言風格)</h3>
-            <p>這就是 ASCON 不需要查表，僅靠 XOR (^)、AND (&) 與 NOT (~) 就完成非線性替換的秘密：</p>
-            <div class="code-block" id="logic-code">
-x0 ^= x4;    x4 ^= x3;    x2 ^= x1;
-t0  = (~x0) & x1;
-t1  = (~x1) & x2;
-t2  = (~x2) & x3;
-t3  = (~x3) & x4;
-t4  = (~x4) & x0;
-x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
-x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2  = ~x2;
+    <div class="container" id="sbox-section" style="border-top-color: #e67e22;">
+        <h2>🔍 第二部分：5-bit Bitsliced S-box 微觀邏輯實驗室</h2>
+        <p>ASCON 的防護核心完全依靠 <strong>XOR (^)</strong>、<strong>AND (&)</strong> 與 <strong>NOT (~)</strong>。點擊下方的輸入位元 (0或1) 來改變狀態，觀察右側每一步的運算結果如何即時變化。</p>
+
+        <div class="sbox-lab">
+            <div style="display: flex; flex-wrap: wrap; gap: 30px;">
+                <div style="flex: 1; min-width: 200px;">
+                    <h3 style="margin-top: 0;">🖱️ 點擊設定輸入位元</h3>
+                    <div class="bit-container"><div class="bit-label">x0</div><div class="bit-box interactive-bit val-0" id="in-x0" onclick="toggleBit(0)">0</div></div>
+                    <div class="bit-container"><div class="bit-label">x1</div><div class="bit-box interactive-bit val-0" id="in-x1" onclick="toggleBit(1)">0</div></div>
+                    <div class="bit-container"><div class="bit-label">x2</div><div class="bit-box interactive-bit val-0" id="in-x2" onclick="toggleBit(2)">0</div></div>
+                    <div class="bit-container"><div class="bit-label">x3</div><div class="bit-box interactive-bit val-0" id="in-x3" onclick="toggleBit(3)">0</div></div>
+                    <div class="bit-container"><div class="bit-label">x4</div><div class="bit-box interactive-bit val-0" id="in-x4" onclick="toggleBit(4)">0</div></div>
+                </div>
+
+                <div style="flex: 2; min-width: 300px;">
+                    <h3 style="margin-top: 0;">⚙️ 即時邏輯推演</h3>
+                    
+                    <div class="step-row">
+                        <div class="step-title">步驟 1: 初步混合<br><small>x0 ^= x4; x4 ^= x3; x2 ^= x1;</small></div>
+                        <div class="bit-container" id="step1-bits"></div>
+                    </div>
+                    <div class="arrow-down">↓</div>
+
+                    <div class="step-row">
+                        <div class="step-title">步驟 2: 非線性核心 (產生 t0~t4)<br><small>t = (~x_i) & x_{i+1}</small></div>
+                        <div class="bit-container" id="step2-bits"></div>
+                    </div>
+                    <div class="arrow-down">↓</div>
+
+                    <div class="step-row">
+                        <div class="step-title">步驟 3: 狀態疊加<br><small>x_i ^= t_{i+1}</small></div>
+                        <div class="bit-container" id="step3-bits"></div>
+                    </div>
+                    <div class="arrow-down">↓</div>
+
+                    <div class="step-row final-output">
+                        <div class="step-title" style="color: #27ae60;">步驟 4: 最終輸出結果<br><small>x1^=x0; x0^=x4; x3^=x2; x2=~x2;</small></div>
+                        <div class="bit-container" id="step4-bits"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 使用 BigInt 來處理 64-bit 運算
-        let x0 = 0x0011223344556677n; // 測試用初始值
-        let x1 = 0x8899aabbccddeeffn;
-        let x2 = 0x0102030405060708n;
-        let x3 = 0x090a0b0c0d0e0f00n;
-        let x4 = 0x1020304050607080n;
-
+        // ==========================================
+        // 第一部分：64-bit 巨觀模擬器邏輯
+        // ==========================================
+        let bx0 = 0x0011223344556677n; 
+        let bx1 = 0x8899aabbccddeeffn;
+        let bx2 = 0x0102030405060708n;
+        let bx3 = 0x090a0b0c0d0e0f00n;
+        let bx4 = 0x1020304050607080n;
         const MASK64 = 0xFFFFFFFFFFFFFFFFn;
-        const ROUND_CONSTANT = 0x00000000000000f0n; // 假設第一輪的常數
+        const ROUND_CONSTANT = 0x00000000000000f0n;
 
-        function formatHex(val) {
-            return val.toString(16).padStart(16, '0').toUpperCase();
-        }
+        function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
 
-        function updateDisplay() {
-            document.getElementById('val-x0').innerText = formatHex(x0);
-            document.getElementById('val-x1').innerText = formatHex(x1);
-            document.getElementById('val-x2').innerText = formatHex(x2);
-            document.getElementById('val-x3').innerText = formatHex(x3);
-            document.getElementById('val-x4').innerText = formatHex(x4);
+        function updateBigDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(bx0);
+            document.getElementById('val-x1').innerText = formatHex(bx1);
+            document.getElementById('val-x2').innerText = formatHex(bx2);
+            document.getElementById('val-x3').innerText = formatHex(bx3);
+            document.getElementById('val-x4').innerText = formatHex(bx4);
         }
 
         function resetState() {
-            x0 = 0x0011223344556677n;
-            x1 = 0x8899aabbccddeeffn;
-            x2 = 0x0102030405060708n;
-            x3 = 0x090a0b0c0d0e0f00n;
-            x4 = 0x1020304050607080n;
-            updateDisplay();
-            
+            bx0 = 0x0011223344556677n; bx1 = 0x8899aabbccddeeffn; bx2 = 0x0102030405060708n;
+            bx3 = 0x090a0b0c0d0e0f00n; bx4 = 0x1020304050607080n;
+            updateBigDisplay();
             document.getElementById('btn-pc').disabled = false;
             document.getElementById('btn-ps').disabled = true;
             document.getElementById('btn-pl').disabled = true;
-            document.getElementById('logic-panel').style.display = 'none';
             document.getElementById('info-panel').innerHTML = "<strong>狀態已重置：</strong> 載入了測試用的初始值。";
+            
+            // 讓 S-box 區塊滾動到可見範圍
+            document.getElementById('sbox-section').style.opacity = '1';
         }
 
         function runPc() {
-            // p_C: 將回合常數 XOR 到 x2
-            x2 = (x2 ^ ROUND_CONSTANT) & MASK64;
-            updateDisplay();
-            
-            document.getElementById('btn-pc').disabled = true;
-            document.getElementById('btn-ps').disabled = false;
-            document.getElementById('info-panel').innerHTML = `<strong>1. 常數加入 (p_C) 完成：</strong> 將回合常數 (${formatHex(ROUND_CONSTANT)}) XOR 加到了 x2 中，用來破壞輪與輪之間的對稱性。`;
+            bx2 = (bx2 ^ ROUND_CONSTANT) & MASK64;
+            updateBigDisplay();
+            document.getElementById('btn-pc').disabled = true; document.getElementById('btn-ps').disabled = false;
+            document.getElementById('info-panel').innerHTML = `<strong>1. 常數加入 (p_C) 完成：</strong> 將回合常數 XOR 加到了 x2 中。`;
         }
 
         function runPs() {
-            // p_S: 5-bit S-box (Bitsliced Boolean Logic)
-            // 完全重現 ASCON 官方 C 實作的邏輯
-            x0 ^= x4; x4 ^= x3; x2 ^= x1;
-            
-            let t0 = (~x0 & MASK64) & x1;
-            let t1 = (~x1 & MASK64) & x2;
-            let t2 = (~x2 & MASK64) & x3;
-            let t3 = (~x3 & MASK64) & x4;
-            let t4 = (~x4 & MASK64) & x0;
-            
-            x0 ^= t1; x1 ^= t2; x2 ^= t3; x3 ^= t4; x4 ^= t0;
-            x1 ^= x0; x0 ^= x4; x3 ^= x2; x2 = (~x2 & MASK64);
-
-            updateDisplay();
-            
-            document.getElementById('btn-ps').disabled = true;
-            document.getElementById('btn-pl').disabled = false;
-            document.getElementById('logic-panel').style.display = 'block';
-            document.getElementById('info-panel').innerHTML = "<strong>2. 替換層 (p_S) 完成：</strong> 這是 ASCON 的核心防護！注意看下方的布林邏輯公式，所有的 64-bit 欄位同時平行通過了非線性的 S-box。";
+            bx0 ^= bx4; bx4 ^= bx3; bx2 ^= bx1;
+            let t0 = (~bx0 & MASK64) & bx1; let t1 = (~bx1 & MASK64) & bx2; let t2 = (~bx2 & MASK64) & bx3;
+            let t3 = (~bx3 & MASK64) & bx4; let t4 = (~bx4 & MASK64) & bx0;
+            bx0 ^= t1; bx1 ^= t2; bx2 ^= t3; bx3 ^= t4; bx4 ^= t0;
+            bx1 ^= bx0; bx0 ^= bx4; bx3 ^= bx2; bx2 = (~bx2 & MASK64);
+            updateBigDisplay();
+            document.getElementById('btn-ps').disabled = true; document.getElementById('btn-pl').disabled = false;
+            document.getElementById('info-panel').innerHTML = "<strong>2. 替換層 (p_S) 完成：</strong> 64-bit 欄位同時平行通過了非線性的 S-box。(可參考下方微觀實驗室原理)";
         }
 
-        function rotr(x, n) {
-            return ((x >> n) | (x << (64n - n))) & MASK64;
-        }
+        function rotr(x, n) { return ((x >> n) | (x << (64n - n))) & MASK64; }
 
         function runPl() {
-            // p_L: 線性擴散層 (旋轉與 XOR)
-            x0 ^= rotr(x0, 19n) ^ rotr(x0, 28n);
-            x1 ^= rotr(x1, 61n) ^ rotr(x1, 39n);
-            x2 ^= rotr(x2,  1n) ^ rotr(x2,  6n);
-            x3 ^= rotr(x3, 10n) ^ rotr(x3, 17n);
-            x4 ^= rotr(x4,  7n) ^ rotr(x4, 41n);
-
-            updateDisplay();
-            
+            bx0 ^= rotr(bx0, 19n) ^ rotr(bx0, 28n); bx1 ^= rotr(bx1, 61n) ^ rotr(bx1, 39n);
+            bx2 ^= rotr(bx2,  1n) ^ rotr(bx2,  6n); bx3 ^= rotr(bx3, 10n) ^ rotr(bx3, 17n);
+            bx4 ^= rotr(bx4,  7n) ^ rotr(bx4, 41n);
+            updateBigDisplay();
             document.getElementById('btn-pl').disabled = true;
-            document.getElementById('info-panel').innerHTML = "<strong>3. 線性擴散層 (p_L) 完成：</strong> 透過位元右旋 (Right Rotation) 與 XOR，讓單一位元的改變能迅速擴散 (Diffusion) 到整個 320-bit 狀態中。一回合結束！";
+            document.getElementById('info-panel').innerHTML = "<strong>3. 線性擴散層 (p_L) 完成：</strong> 透過位元右旋與 XOR 產生擴散效應。一回合結束！";
         }
 
-        // 初始化顯示
+        // ==========================================
+        // 第二部分：5-bit 微觀實驗室邏輯
+        // ==========================================
+        let bits = [0, 0, 0, 0, 0]; // x0 ~ x4
+
+        function toggleBit(index) {
+            bits[index] = bits[index] === 0 ? 1 : 0;
+            updateSboxDisplay();
+        }
+
+        function generateBitBoxes(values) {
+            return values.map(v => `<div class="bit-box val-${v}">${v}</div>`).join('');
+        }
+
+        function updateSboxDisplay() {
+            // 更新輸入按鈕畫面
+            for(let i=0; i<5; i++) {
+                const el = document.getElementById(`in-x${i}`);
+                el.innerText = bits[i];
+                el.className = `bit-box interactive-bit val-${bits[i]}`;
+            }
+
+            let x0 = bits[0], x1 = bits[1], x2 = bits[2], x3 = bits[3], x4 = bits[4];
+
+            // 步驟 1
+            x0 ^= x4; x4 ^= x3; x2 ^= x1;
+            document.getElementById('step1-bits').innerHTML = generateBitBoxes([x0, x1, x2, x3, x4]);
+
+            // 步驟 2 (計算 t0 ~ t4)
+            let t0 = (~x0 & 1) & x1;
+            let t1 = (~x1 & 1) & x2;
+            let t2 = (~x2 & 1) & x3;
+            let t3 = (~x3 & 1) & x4;
+            let t4 = (~x4 & 1) & x0;
+            // 這裡顯示 t0~t4 給使用者看
+            document.getElementById('step2-bits').innerHTML = 
+                `<div style="display:flex; gap:10px; margin-right:15px; align-items:center;"><strong>t=</strong> ${generateBitBoxes([t0, t1, t2, t3, t4])}</div>`;
+
+            // 步驟 3
+            x0 ^= t1; x1 ^= t2; x2 ^= t3; x3 ^= t4; x4 ^= t0;
+            document.getElementById('step3-bits').innerHTML = generateBitBoxes([x0, x1, x2, x3, x4]);
+
+            // 步驟 4 (最終輸出)
+            x1 ^= x0; x0 ^= x4; x3 ^= x2; x2 = (~x2 & 1);
+            document.getElementById('step4-bits').innerHTML = generateBitBoxes([x0, x1, x2, x3, x4]);
+        }
+
+        // 初始化
         resetState();
+        updateSboxDisplay();
     </script>
 </body>
 </html>
