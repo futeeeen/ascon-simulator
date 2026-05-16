@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCON 明密文處理 (Plaintext / Ciphertext) 實驗室</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --calc-bg: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 5px solid var(--secondary);
+        }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .input-group input { 
+            width: 100%; padding: 10px; border: 2px solid #ddd; 
+            border-radius: 5px; font-family: monospace; font-size: 1.1rem;
+            box-sizing: border-box;
+        }
+        
+        .state-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        .state-label { font-weight: bold; color: #3498db; }
+        .state-value { letter-spacing: 1.5px; word-break: break-all; transition: all 0.3s; }
+        .state-value.flash-x0 { background-color: #2980b9; color: #fff; font-weight: bold; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        button {
+            background-color: var(--secondary); color: white; border: none;
+            padding: 12px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 15px; font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .trace-panel {
+            background: var(--calc-bg);
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 5px solid var(--secondary);
+            white-space: pre-wrap;
+        }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        .formula { color: #a29bfe; font-weight: bold; }
+        .cipher-box {
+            background: #e1f5fe; border: 2px dashed #0288d1; padding: 15px;
+            border-radius: 6px; font-family: monospace; font-size: 1.2rem;
+            font-weight: bold; text-align: center; margin-top: 15px; color: #0277bd;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📝 ASCON 明文與密文處理 (Plaintext / Ciphertext) 實驗室</h1>
+    <p>在這裡，機密的明文與海綿結構的<strong>吸收槽 (x0 暫存器)</strong> 進行 XOR 運算，立即可得到傳輸用的密文，同時也將機密特徵鎖進了狀態矩陣中。</p>
+    
+    <a href="index.html" style="color: var(--secondary); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
+
+    <div class="container">
+        <h2>1. 輸入機密明文 (Plaintext)</h2>
+        <div class="input-group">
+            <label for="pt-input">請輸入想要加密的文字 (秘密訊息):</label>
+            <input type="text" id="pt-input" value="SECRET">
+        </div>
+        <div class="controls">
+            <button id="btn-pad" onclick="processPadding()">1. 轉換與填補 (Padding)</button>
+            <button id="btn-xor" onclick="processXor()" disabled>2. XOR 生成密文</button>
+            <button id="btn-perm" onclick="processChaining()" disabled>3. 回合排列攪拌 (Chaining)</button>
+            <button class="reset-btn" style="background-color: #e74c3c;" onclick="resetLab()">重置實驗室</button>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #2c3e50;">
+        <h2>⚙️ 海綿雙工運算即時追蹤</h2>
+        <div class="trace-panel" id="trace-panel">💡 點擊上方按鈕開始模擬，觀看文字如何一步步轉化為密文。</div>
+        
+        <div id="cipher-display" class="cipher-box" style="display: none;">
+            生成的密文 Ciphertext (Hex): <span id="cipher-hex">0000000000000000</span>
+        </div>
+
+        <h3>當前 320-bit 內部狀態 (Internal State)</h3>
+        <div class="state-grid">
+            <div class="state-label">x0 (核心吸收槽) :</div><div class="state-value" id="val-x0">0000000000000000</div>
+            <div class="state-label">x1             :</div><div class="state-value" id="val-x1">0000000000000000</div>
+            <div class="state-label">x2             :</div><div class="state-value" id="val-x2">0000000000000000</div>
+            <div class="state-label">x3             :</div><div class="state-value" id="val-x3">0000000000000000</div>
+            <div class="state-label">x4             :</div><div class="state-value" id="val-x4">0000000000000000</div>
+        </div>
+    </div>
+
+    <script>
+        // 承接前一階段攪拌後的模擬狀態值
+        let x0 = 0xCE4A7A4E80123456n;
+        let x1 = 0x8899AABBCCDDEEFFn;
+        let x2 = 0x0102030405060708n;
+        let x3 = 0x5555555555555555n;
+        let x4 = 0xAAAAAAAABBBBBBBBn;
+        
+        let paddedBlockHex = "";
+        let paddedBlockBigInt = 0n;
+        let ciphertextBigInt = 0n;
+
+        function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
+
+        function updateDisplay() {
+            document.getElementById('val-x0').innerText = formatHex(x0);
+            document.getElementById('val-x1').innerText = formatHex(x1);
+            document.getElementById('val-x2').innerText = formatHex(x2);
+            document.getElementById('val-x3').innerText = formatHex(x3);
+            document.getElementById('val-x4').innerText = formatHex(x4);
+        }
+
+        function resetLab() {
+            x0 = 0xCE4A7A4E80123456n; x1 = 0x8899AABBCCDDEEFFn; x2 = 0x0102030405060708n; x3 = 0x5555555555555555n; x4 = 0xAAAAAAAABBBBBBBBn;
+            updateDisplay();
+            document.getElementById('val-x0').className = "state-value";
+            document.getElementById('cipher-display').style.display = 'none';
+            document.getElementById('btn-pad').disabled = false;
+            document.getElementById('btn-xor').disabled = true;
+            document.getElementById('btn-perm').disabled = true;
+            document.getElementById('trace-panel').innerHTML = "💡 點擊上方按鈕開始模擬，觀看文字如何一步步轉化為密文。";
+        }
+
+        function stringToHex(str) {
+            let hex = "";
+            for (let i = 0; i < str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        function processPadding() {
+            let ptStr = document.getElementById('pt-input').value;
+            let rawHex = stringToHex(ptStr);
+            
+            // ASCON Padding 規則: 尾端補 0x80，其餘補 0 滿 64-bit
+            paddedBlockHex = rawHex + "80";
+            paddedBlockHex = paddedBlockHex.padEnd(16, '0');
+            paddedBlockBigInt = BigInt("0x" + paddedBlockHex);
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 1: 明文轉化與邊界對齊 (Padding)]
+輸入機密字串： "${ptStr}" ➔ 十六進位 Hex: ${rawHex.toUpperCase()}
+<span class="formula">填補規則：尾端補 1000...00 (二進位) 以滿足海綿 Rate $r=64$ 的寬度。</span>
+對齊後的明文塊 (P1)： <span class="highlight">${paddedBlockHex.toUpperCase()}</span>`;
+            
+            document.getElementById('btn-pad').disabled = true;
+            document.getElementById('btn-xor').disabled = false;
+        }
+
+        function processXor() {
+            // 密文生成公式： C_i = P_i XOR x0
+            ciphertextBigInt = paddedBlockBigInt ^ x0;
+            
+            // 在海綿模式加密中，XOR 後的結果直接成為新的 x0 狀態
+            x0 = ciphertextBigInt;
+            
+            updateDisplay();
+            document.getElementById('val-x0').className = "state-value flash-x0";
+            
+            document.getElementById('cipher-hex').innerText = formatHex(ciphertextBigInt);
+            document.getElementById('cipher-display').style.display = 'block';
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 2: 海綿吸收與密文吐出 (XOR)]
+將明文區塊 P1 與狀態頂部的暫存器 x0 進行 XOR。所得結果即為對外輸出的密文 C1：
+<span class="formula">公式：C1 = P1 ⊕ x0</span>
+  明文區塊 P1 = ${paddedBlockHex.toUpperCase()}
+  ⊕ 吸收槽 x0 = ${document.getElementById('val-x0').innerText} (計算前的值)
+  ----------------------------------
+  <span class="highlight">輸出密文 C1 = ${formatHex(ciphertextBigInt)}</span>
+
+同時，這個密文數值會直接覆蓋成為矩陣的新 <span class="highlight">x0</span>，代表資料已被海綿「完全吸收」！`;
+
+            document.getElementById('btn-xor').disabled = true;
+            document.getElementById('btn-perm').disabled = false;
+        }
+
+        function processChaining() {
+            document.getElementById('val-x0').className = "state-value";
+            
+            // 模擬 Permutation 混淆函數
+            x0 = x0 ^ 0x1111222233334444n;
+            x1 = x1 ^ 0x5555666677778888n;
+            x2 = x2 ^ 0x9999AAAABBBBCCCCn;
+            x3 = x3 ^ 0xDDDDFFFF00001111n;
+            x4 = x4 ^ 0x123456789ABCDEF0n;
+            
+            updateDisplay();
+
+            document.getElementById('trace-panel').innerHTML = 
+`[步驟 3: 回合排列與前後文鏈結 (Permutation Chaining)]
+當前區塊處理完畢。為了防止後面區塊與前面區塊脫節，矩陣立刻啟動排列攪拌（Permutation）。
+狀態矩陣內所有的暫存器（x0 ~ x4）將進行劇烈的非線性與線性擴散攪拌：
+  <span class="highlight">狀態已全面打碎混淆！</span>
+
+<strong>🌟 鏈結效應達成：</strong>
+前一個區塊的機密特徵此時已完全擴散到整個 320-bit 狀態中。如果這份訊息還有下一個明文區塊，下一輪的密文將完全取決於這一輪攪拌後的全新陣型。這就是密碼學中鐵壁般的上下文依賴防護！`;
+
+            document.getElementById('btn-perm').disabled = true;
+        }
+
+        resetLab();
+    </script>
+</body>
+</html>
