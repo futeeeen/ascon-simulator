@@ -33,6 +33,7 @@
             border-top: 5px solid var(--secondary);
         }
         
+        /* 64-bit 模擬器樣式 */
         .state-grid {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -59,6 +60,7 @@
         button.reset-btn:hover { background-color: #c0392b; }
         .info-text { margin-top: 15px; padding: 15px; background: #e8f8f5; border-radius: 5px; border-left: 4px solid #1abc9c;}
 
+        /* 5-bit 互動 S-box 樣式 */
         .sbox-lab { background: #fdfefe; border: 1px solid #dcdde1; padding: 20px; border-radius: 8px; }
         .bit-container { display: flex; gap: 10px; margin-bottom: 15px; align-items: center;}
         .bit-box {
@@ -95,20 +97,87 @@
         .calc-panel span.highlight { color: #f1c40f; font-weight: bold; }
         .calc-panel span.formula { color: #a29bfe; font-weight: bold; }
         .calc-panel span.comment { color: #7f8c8d; font-style: italic; }
+
+        /* 第三部分：擴散層樣式 */
+        .diff-container {
+            background: #1e272e;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        .diff-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 4px;
+            min-width: max-content;
+        }
+        .diff-label {
+            width: 140px;
+            color: #34dbcb;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            text-align: right;
+            padding-right: 15px;
+        }
+        .diff-bit {
+            width: 12px;
+            height: 18px;
+            border-radius: 2px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 9px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .diff-bit.val-1 {
+            background-color: #f1c40f;
+            box-shadow: 0 0 6px rgba(241, 196, 15, 0.8);
+            color: #000;
+        }
+        .diff-bit.val-0 {
+            background-color: #2f3640;
+            color: transparent; /* 隱藏 0，讓 1 在視覺上更突顯 */
+        }
+        .diff-bit.interactive:hover {
+            transform: scale(1.3);
+            background-color: #f39c12;
+        }
+        .reg-btn {
+            background-color: #7f8c8d;
+            padding: 8px 15px;
+            margin-right: 5px;
+            margin-bottom: 10px;
+        }
+        .reg-btn.active {
+            background-color: #e67e22;
+        }
+        .stats-panel {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffeeba;
+            margin-top: 15px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
     <h1>🧠 ASCON 排列函數 (Permutation) 實驗室</h1>
-    <p>這裡展示了 ASCON 核心狀態的數學運算。上半部是 320-bit 的巨觀變化，下半部則可親自操作 S-box 的微觀布林邏輯。</p>
+    <p>這裡展示了 ASCON 核心狀態的數學運算。深入探索巨觀狀態變化、微觀 S-box 布林邏輯，以及完美的擴散效應。</p>
     
     <a href="index.html" style="color: #8e44ad; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← 返回 ASCON 介紹首頁</a>
 
     <div class="container">
         <h2>🔬 第一部分：320-bit 狀態巨觀變化 (單一 Round)</h2>
-        
         <div class="calc-panel" id="macro-trace-panel">💡 <strong>巨觀步驟詳解儀：</strong>請點擊下方的功能按鈕，此處將會解密 64-bit 字組在該階段所套用的精確密碼學數學公式。</div>
-
         <div class="state-grid" id="stateDisplay">
             <div class="state-label">x0 :</div><div class="state-value" id="val-x0">0000000000000000</div>
             <div class="state-label">x1 :</div><div class="state-value" id="val-x1">0000000000000000</div>
@@ -128,9 +197,7 @@
     <div class="container" id="sbox-section" style="border-top-color: #e67e22;">
         <h2>🔍 第二部分：5-bit Bitsliced S-box 微觀邏輯實驗室</h2>
         <p>點擊左側「輸入位元」來改變初始值。<strong>👉 點擊右側運算過程中的任何一個位元方塊，上方解析儀就會顯示它的計算過程！</strong></p>
-
         <div class="calc-panel" id="calc-panel">點擊右側運算過程中的方塊，這裡將會顯示詳細的布林邏輯算式...</div>
-
         <div class="sbox-lab">
             <div style="display: flex; flex-wrap: wrap; gap: 30px;">
                 <div style="flex: 1; min-width: 200px;">
@@ -141,34 +208,59 @@
                     <div class="bit-container"><div class="bit-label">x3</div><div class="bit-box interactive-bit val-0" id="in-x3" onclick="toggleBit(3)">0</div></div>
                     <div class="bit-container"><div class="bit-label">x4</div><div class="bit-box interactive-bit val-0" id="in-x4" onclick="toggleBit(4)">0</div></div>
                 </div>
-
                 <div style="flex: 2; min-width: 300px;">
                     <h3 style="margin-top: 0;">⚙️ 即時邏輯推演</h3>
-                    
-                    <div class="step-row">
-                        <div class="step-title">步驟 1: 初步混合<br><small>x0^=x4; x4^=x3; x2^=x1;</small></div>
-                        <div class="bit-container" id="step1-bits"></div>
-                    </div>
+                    <div class="step-row"><div class="step-title">步驟 1: 初步混合<br><small>x0^=x4; x4^=x3; x2^=x1;</small></div><div class="bit-container" id="step1-bits"></div></div>
                     <div class="arrow-down">↓</div>
-
-                    <div class="step-row">
-                        <div class="step-title">步驟 2: 非線性核心 (產生 t0~t4)<br><small>t_i = (~x_i) & x_{i+1}</small></div>
-                        <div class="bit-container" id="step2-bits"></div>
-                    </div>
+                    <div class="step-row"><div class="step-title">步驟 2: 非線性核心 (產生 t0~t4)<br><small>t_i = (~x_i) & x_{i+1}</small></div><div class="bit-container" id="step2-bits"></div></div>
                     <div class="arrow-down">↓</div>
-
-                    <div class="step-row">
-                        <div class="step-title">步驟 3: 狀態疊加<br><small>x_i ^= t_{i+1}</small></div>
-                        <div class="bit-container" id="step3-bits"></div>
-                    </div>
+                    <div class="step-row"><div class="step-title">步驟 3: 狀態疊加<br><small>x_i ^= t_{i+1}</small></div><div class="bit-container" id="step3-bits"></div></div>
                     <div class="arrow-down">↓</div>
-
-                    <div class="step-row final-output">
-                        <div class="step-title" style="color: #27ae60;">步驟 4: 最終輸出結果<br><small>x1^=x0; x0^=x4; x3^=x2; x2=~x2;</small></div>
-                        <div class="bit-container" id="step4-bits"></div>
-                    </div>
+                    <div class="step-row final-output"><div class="step-title" style="color: #27ae60;">步驟 4: 最終輸出結果<br><small>x1^=x0; x0^=x4; x3^=x2; x2=~x2;</small></div><div class="bit-container" id="step4-bits"></div></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="container" style="border-top-color: #34dbcb;">
+        <h2>🌪️ 第三部分：線性擴散層 (Linear Layer) 完美擴散解析</h2>
+        <p>這部分負責產生密碼學中的<strong>「雪崩效應」</strong>。點擊下方的原狀態（第一列）來改變 64-bit 中的單一亮點 (1)。觀察它如何透過右位移（Rotr）與 XOR 疊加，在最後一列擴散成 3 個點！</p>
+        
+        <div style="margin-top: 15px;">
+            <button class="reg-btn active" id="btn-reg-x0" onclick="changeReg('x0')">切換至 x0 (19, 28)</button>
+            <button class="reg-btn" id="btn-reg-x1" onclick="changeReg('x1')">切換至 x1 (61, 39)</button>
+            <button class="reg-btn" id="btn-reg-x2" onclick="changeReg('x2')">切換至 x2 (1, 6)</button>
+            <button class="reg-btn" id="btn-reg-x3" onclick="changeReg('x3')">切換至 x3 (10, 17)</button>
+            <button class="reg-btn" id="btn-reg-x4" onclick="changeReg('x4')">切換至 x4 (7, 41)</button>
+            <button class="reset-btn" style="padding: 8px 15px;" onclick="resetDiffusion()">清除畫布</button>
+        </div>
+
+        <div class="diff-container">
+            <div class="diff-row">
+                <div class="diff-label">原本的 x (🖱️點擊)</div>
+                <div id="diff-orig" style="display: flex; gap: 2px;"></div>
+            </div>
+            
+            <div class="diff-row">
+                <div class="diff-label" id="diff-r1-label">⊕ (x >>> 19)</div>
+                <div id="diff-r1" style="display: flex; gap: 2px;"></div>
+            </div>
+
+            <div class="diff-row">
+                <div class="diff-label" id="diff-r2-label">⊕ (x >>> 28)</div>
+                <div id="diff-r2" style="display: flex; gap: 2px;"></div>
+            </div>
+
+            <hr style="border-color: #34495e; margin: 10px 0;">
+
+            <div class="diff-row">
+                <div class="diff-label" style="color: #f1c40f;">= 擴散結果 (XOR)</div>
+                <div id="diff-res" style="display: flex; gap: 2px;"></div>
+            </div>
+        </div>
+
+        <div class="stats-panel" id="diff-stats">
+            擴散效應：輸入 1 個位元改變 ➔ 輸出擴散為 3 個位元變化。
         </div>
     </div>
 
@@ -176,151 +268,72 @@
         // ==========================================
         // 第一部分：64-bit 巨觀模擬器邏輯
         // ==========================================
-        let bx0 = 0x0011223344556677n;
-        let bx1 = 0x8899aabbccddeeffn;
-        let bx2 = 0x0102030405060708n;
-        let bx3 = 0x090a0b0c0d0e0f00n;
-        let bx4 = 0x1020304050607080n;
-        const MASK64 = 0xFFFFFFFFFFFFFFFFn;
-        const ROUND_CONSTANT = 0x00000000000000f0n;
+        let bx0 = 0x0011223344556677n; let bx1 = 0x8899aabbccddeeffn; let bx2 = 0x0102030405060708n; let bx3 = 0x090a0b0c0d0e0f00n; let bx4 = 0x1020304050607080n;
+        const MASK64 = 0xFFFFFFFFFFFFFFFFn; const ROUND_CONSTANT = 0x00000000000000f0n;
         
         function formatHex(val) { return val.toString(16).padStart(16, '0').toUpperCase(); }
         
         function updateBigDisplay() {
-            document.getElementById('val-x0').innerText = formatHex(bx0); 
-            document.getElementById('val-x1').innerText = formatHex(bx1);
-            document.getElementById('val-x2').innerText = formatHex(bx2); 
-            document.getElementById('val-x3').innerText = formatHex(bx3); 
-            document.getElementById('val-x4').innerText = formatHex(bx4);
+            document.getElementById('val-x0').innerText = formatHex(bx0); document.getElementById('val-x1').innerText = formatHex(bx1);
+            document.getElementById('val-x2').innerText = formatHex(bx2); document.getElementById('val-x3').innerText = formatHex(bx3); document.getElementById('val-x4').innerText = formatHex(bx4);
         }
         
         function resetState() {
             bx0 = 0x0011223344556677n; bx1 = 0x8899aabbccddeeffn; bx2 = 0x0102030405060708n; bx3 = 0x090a0b0c0d0e0f00n; bx4 = 0x1020304050607080n;
-            updateBigDisplay(); 
-            document.getElementById('btn-pc').disabled = false; 
-            document.getElementById('btn-ps').disabled = true; 
-            document.getElementById('btn-pl').disabled = true;
+            updateBigDisplay(); document.getElementById('btn-pc').disabled = false; document.getElementById('btn-ps').disabled = true; document.getElementById('btn-pl').disabled = true;
             document.getElementById('macro-trace-panel').innerHTML = `💡 <strong>巨觀步驟詳解儀：</strong>請點擊下方的功能按鈕，此處將會解密 64-bit 字組在該階段所套用的精確密碼學數學公式。`;
             document.getElementById('info-panel').innerHTML = "<strong>狀態已重置：</strong> 載入了測試用的初始值。";
         }
         
         function runPc() {
-            let oldX2 = bx2;
-            bx2 = (bx2 ^ ROUND_CONSTANT) & MASK64;
-            updateBigDisplay();
-            document.getElementById('btn-pc').disabled = true; 
-            document.getElementById('btn-ps').disabled = false;
-            
-            document.getElementById('macro-trace-panel').innerHTML = 
-`[Stage 1: 常數加入層 p_C解析]
-<span class="formula">公式：x2 = x2 ⊕ Round_Constant</span>
-帶入數值：
-  原本的 x2 = ${formatHex(oldX2)}
-  輪常數    = ${formatHex(ROUND_CONSTANT)}
-  ----------------------------------
-  <span class="highlight">運算結果 x2 = ${formatHex(bx2)}</span>  <span class="comment">(其餘暫存器維持不變)</span>`;
-            
+            let oldX2 = bx2; bx2 = (bx2 ^ ROUND_CONSTANT) & MASK64; updateBigDisplay();
+            document.getElementById('btn-pc').disabled = true; document.getElementById('btn-ps').disabled = false;
+            document.getElementById('macro-trace-panel').innerHTML = `[Stage 1: 常數加入層 p_C解析]\n<span class="formula">公式：x2 = x2 ⊕ Round_Constant</span>\n帶入數值：\n  原本的 x2 = ${formatHex(oldX2)}\n  輪常數    = ${formatHex(ROUND_CONSTANT)}\n  ----------------------------------\n  <span class="highlight">運算結果 x2 = ${formatHex(bx2)}</span>  <span class="comment">(其餘暫存器維持不變)</span>`;
             document.getElementById('info-panel').innerHTML = `<strong>1. 常數加入 (p_C) 完成：</strong> 成功將回合常數 XOR 到 x2。`;
         }
         
         function runPs() {
-            // 已修復語法錯誤
             bx0 ^= bx4; bx4 ^= bx3; bx2 ^= bx1;
-            
-            let t0 = (~bx0 & MASK64) & bx1;
-            let t1 = (~bx1 & MASK64) & bx2;
-            let t2 = (~bx2 & MASK64) & bx3;
-            let t3 = (~bx3 & MASK64) & bx4;
-            let t4 = (~bx4 & MASK64) & bx0; 
-            
-            bx0 ^= t1; bx1 ^= t2; bx2 ^= t3; bx3 ^= t4; bx4 ^= t0; 
-            bx1 ^= bx0; bx0 ^= bx4; bx3 ^= bx2; bx2 = (~bx2 & MASK64);
-            
+            let t0 = (~bx0 & MASK64) & bx1; let t1 = (~bx1 & MASK64) & bx2; let t2 = (~bx2 & MASK64) & bx3; let t3 = (~bx3 & MASK64) & bx4; let t4 = (~bx4 & MASK64) & bx0; 
+            bx0 ^= t1; bx1 ^= t2; bx2 ^= t3; bx3 ^= t4; bx4 ^= t0; bx1 ^= bx0; bx0 ^= bx4; bx3 ^= bx2; bx2 = (~bx2 & MASK64);
             updateBigDisplay();
-            document.getElementById('btn-ps').disabled = true; 
-            document.getElementById('btn-pl').disabled = false;
-            
-            document.getElementById('macro-trace-panel').innerHTML = 
-`[Stage 2: 替換層 p_S 解析]
-<span class="formula">核心原理：位元切片平行運算 (Bitslicing)</span>
-說明：此時 5 個 64-bit 暫存器（x0 ~ x4）的所有位元，正「同時且平行」地通過 64 組 5-bit S-box。
-運算公式完全等同於下方的微觀布林邏輯，利用 CPU 的位元運算優勢，在一個指令週期內完成了 64 次 S-box 替換！
-<span class="highlight">狀態更新：x0 ~ x4 已全數轉換為非線性特徵值。</span>`;
-
+            document.getElementById('btn-ps').disabled = true; document.getElementById('btn-pl').disabled = false;
+            document.getElementById('macro-trace-panel').innerHTML = `[Stage 2: 替換層 p_S 解析]\n<span class="formula">核心原理：位元切片平行運算 (Bitslicing)</span>\n說明：此時 5 個 64-bit 暫存器（x0 ~ x4）的所有位元，正「同時且平行」地通過 64 組 5-bit S-box。\n運算公式完全等同於下方的微觀布林邏輯，利用 CPU 的位元運算優勢，在一個指令週期內完成了 64 次 S-box 替換！\n<span class="highlight">狀態更新：x0 ~ x4 已全數轉換為非線性特徵值。</span>`;
             document.getElementById('info-panel').innerHTML = "<strong>2. 替換層 (p_S) 完成：</strong> 64-bit 欄位已平行通過非線性 S-box。";
         }
         
         function rotr(x, n) { return ((x >> n) | (x << (64n - n))) & MASK64; }
         
         function runPl() {
-            bx0 ^= rotr(bx0, 19n) ^ rotr(bx0, 28n); 
-            bx1 ^= rotr(bx1, 61n) ^ rotr(bx1, 39n); 
-            bx2 ^= rotr(bx2,  1n) ^ rotr(bx2,  6n);
-            bx3 ^= rotr(bx3, 10n) ^ rotr(bx3, 17n); 
-            bx4 ^= rotr(bx4,  7n) ^ rotr(bx4, 41n);
-            
+            bx0 ^= rotr(bx0, 19n) ^ rotr(bx0, 28n); bx1 ^= rotr(bx1, 61n) ^ rotr(bx1, 39n); bx2 ^= rotr(bx2,  1n) ^ rotr(bx2,  6n);
+            bx3 ^= rotr(bx3, 10n) ^ rotr(bx3, 17n); bx4 ^= rotr(bx4,  7n) ^ rotr(bx4, 41n);
             updateBigDisplay();
             document.getElementById('btn-pl').disabled = true;
-            
-            document.getElementById('macro-trace-panel').innerHTML = 
-`[Stage 3: 線性擴散層 p_L 解析]
-<span class="formula">核心原理：藉由「循環右旋 (Rotr)」與「XOR」達到完美擴散</span>
-各暫存器專屬混淆公式：
-  <span class="formula">x0 = x0 ⊕ (x0 ⇄ 19) ⊕ (x0 ⇄ 28)</span> = ${formatHex(bx0)}
-  <span class="formula">x1 = x1 ⊕ (x1 ⇄ 61) ⊕ (x1 ⇄ 39)</span> = ${formatHex(bx1)}
-  <span class="formula">x2 = x2 ⊕ (x2 ⇄ 1)  ⊕ (x2 ⇄ 6)</span>  = ${formatHex(bx2)}
-  <span class="formula">x3 = x3 ⊕ (x3 ⇄ 10) ⊕ (x3 ⇄ 17)</span> = ${formatHex(bx3)}
-  <span class="formula">x4 = x4 ⊕ (x4 ⇄ 7)  ⊕ (x4 ⇄ 41)</span> = ${formatHex(bx4)}
-<span class="comment">(備註：'⇄' 代表 64-bit 的循環右位移，能確保任一位元的改變迅速影響到其他位置)</span>`;
-
+            document.getElementById('macro-trace-panel').innerHTML = `[Stage 3: 線性擴散層 p_L 解析]\n<span class="formula">核心原理：藉由「循環右旋 (Rotr)」與「XOR」達到完美擴散</span>\n各暫存器專屬混淆公式：\n  <span class="formula">x0 = x0 ⊕ (x0 ⇄ 19) ⊕ (x0 ⇄ 28)</span> = ${formatHex(bx0)}\n  <span class="formula">x1 = x1 ⊕ (x1 ⇄ 61) ⊕ (x1 ⇄ 39)</span> = ${formatHex(bx1)}\n  <span class="formula">x2 = x2 ⊕ (x2 ⇄ 1)  ⊕ (x2 ⇄ 6)</span>  = ${formatHex(bx2)}\n  <span class="formula">x3 = x3 ⊕ (x3 ⇄ 10) ⊕ (x3 ⇄ 17)</span> = ${formatHex(bx3)}\n  <span class="formula">x4 = x4 ⊕ (x4 ⇄ 7)  ⊕ (x4 ⇄ 41)</span> = ${formatHex(bx4)}\n<span class="comment">(備註：'⇄' 代表 64-bit 的循環右位移，能確保任一位元的改變迅速影響到其他位置)</span>`;
             document.getElementById('info-panel').innerHTML = "<strong>3. 線性擴散層 (p_L) 完成：</strong> 透過右旋與 XOR 產生巨觀擴散效應。單輪完結！";
         }
 
         // ==========================================
         // 第二部分：5-bit 微觀實驗室邏輯
         // ==========================================
-        let in_bits = [0, 0, 0, 0, 0]; 
-        let history = { s0: [], s1: [], t:  [], s3: [], s4: [] };
-
-        function toggleBit(index) {
-            in_bits[index] = in_bits[index] === 0 ? 1 : 0;
-            document.getElementById('calc-panel').innerHTML = "點擊右側運算過程中的方塊，這裡將會顯示詳細的布林邏輯算式...";
-            updateSboxDisplay();
-        }
-
-        function generateInteractiveBox(stepId, varPrefix, values) {
-            return values.map((v, i) => 
-                `<div class="bit-box val-${v}" onclick="showTrace('${stepId}', ${i})" title="點擊查看算法">${v}</div>`
-            ).join('');
-        }
-
+        let in_bits = [0, 0, 0, 0, 0]; let history = { s0: [], s1: [], t:  [], s3: [], s4: [] };
+        function toggleBit(index) { in_bits[index] = in_bits[index] === 0 ? 1 : 0; document.getElementById('calc-panel').innerHTML = "點擊右側運算過程中的方塊，這裡將會顯示詳細的布林邏輯算式..."; updateSboxDisplay(); }
+        function generateInteractiveBox(stepId, varPrefix, values) { return values.map((v, i) => `<div class="bit-box val-${v}" onclick="showTrace('${stepId}', ${i})" title="點擊查看算法">${v}</div>`).join(''); }
         function updateSboxDisplay() {
             for(let i=0; i<5; i++) {
-                const el = document.getElementById(`in-x${i}`);
-                el.innerText = in_bits[i]; 
-                el.className = `bit-box interactive-bit val-${in_bits[i]}`;
+                const el = document.getElementById(`in-x${i}`); el.innerText = in_bits[i]; el.className = `bit-box interactive-bit val-${in_bits[i]}`;
             }
-            history.s0 = [...in_bits];
-            let [x0, x1, x2, x3, x4] = in_bits;
-
-            x0 ^= x4; x4 ^= x3; x2 ^= x1;
-            history.s1 = [x0, x1, x2, x3, x4];
+            history.s0 = [...in_bits]; let [x0, x1, x2, x3, x4] = in_bits;
+            x0 ^= x4; x4 ^= x3; x2 ^= x1; history.s1 = [x0, x1, x2, x3, x4];
             document.getElementById('step1-bits').innerHTML = generateInteractiveBox('step1', 'x', history.s1);
-
             let t0 = (~x0 & 1) & x1, t1 = (~x1 & 1) & x2, t2 = (~x2 & 1) & x3, t3 = (~x3 & 1) & x4, t4 = (~x4 & 1) & x0;
             history.t = [t0, t1, t2, t3, t4];
-            document.getElementById('step2-bits').innerHTML = 
-                `<div style="display:flex; gap:10px; align-items:center;"><strong style="color:#7f8c8d; font-family:monospace;">t =</strong> ${generateInteractiveBox('step2', 't', history.t)}</div>`;
-
-            x0 ^= t1; x1 ^= t2; x2 ^= t3; x3 ^= t4; x4 ^= t0;
-            history.s3 = [x0, x1, x2, x3, x4];
+            document.getElementById('step2-bits').innerHTML = `<div style="display:flex; gap:10px; align-items:center;"><strong style="color:#7f8c8d; font-family:monospace;">t =</strong> ${generateInteractiveBox('step2', 't', history.t)}</div>`;
+            x0 ^= t1; x1 ^= t2; x2 ^= t3; x3 ^= t4; x4 ^= t0; history.s3 = [x0, x1, x2, x3, x4];
             document.getElementById('step3-bits').innerHTML = generateInteractiveBox('step3', 'x', history.s3);
-
-            x1 ^= x0; x0 ^= x4; x3 ^= x2; x2 = (~x2 & 1);
-            history.s4 = [x0, x1, x2, x3, x4];
+            x1 ^= x0; x0 ^= x4; x3 ^= x2; x2 = (~x2 & 1); history.s4 = [x0, x1, x2, x3, x4];
             document.getElementById('step4-bits').innerHTML = generateInteractiveBox('step4', 'x', history.s4);
         }
-
         function showTrace(step, idx) {
             let exp = "";
             if (step === 'step1') {
@@ -329,16 +342,12 @@
                 else if(idx === 2) exp = `[步驟1] <span class="highlight">x2</span> <span class="formula">= 原本的 x2 ⊕ x1</span> = ${history.s0[2]} ⊕ ${history.s0[1]} = <span class="highlight">${history.s1[2]}</span>`;
                 else if(idx === 3) exp = `[步驟1] <span class="highlight">x3</span> <span class="formula">= 保持不變</span> = <span class="highlight">${history.s1[3]}</span>`;
                 else if(idx === 4) exp = `[步驟1] <span class="highlight">x4</span> <span class="formula">= 原本的 x4 ⊕ x3</span> = ${history.s0[4]} ⊕ ${history.s0[3]} = <span class="highlight">${history.s1[4]}</span>`;
-            } 
-            else if (step === 'step2') {
+            } else if (step === 'step2') {
                 let nextIdx = (idx + 1) % 5, prevX = history.s1[idx], nextX = history.s1[nextIdx], notX = (~prevX & 1);
                 exp = `[步驟2] <span class="highlight">t${idx}</span> <span class="formula">= (~x${idx}) & x${nextIdx}</span> = (~${prevX}) & ${nextX} = ${notX} & ${nextX} = <span class="highlight">${history.t[idx]}</span><br><small style="color:#bdc3c7;">(備註：這裡的 x 是取自步驟 1 的結果)</small>`;
-            }
-            else if (step === 'step3') {
-                let tIdx = (idx + 1) % 5;
-                exp = `[步驟3] <span class="highlight">x${idx}</span> <span class="formula">= x${idx} ⊕ t${tIdx}</span> = ${history.s1[idx]} ⊕ ${history.t[tIdx]} = <span class="highlight">${history.s3[idx]}</span>`;
-            }
-            else if (step === 'step4') {
+            } else if (step === 'step3') {
+                let tIdx = (idx + 1) % 5; exp = `[步驟3] <span class="highlight">x${idx}</span> <span class="formula">= x${idx} ⊕ t${tIdx}</span> = ${history.s1[idx]} ⊕ ${history.t[tIdx]} = <span class="highlight">${history.s3[idx]}</span>`;
+            } else if (step === 'step4') {
                 if(idx === 0) exp = `[步驟4] <span class="highlight">x0</span> <span class="formula">= x0 ⊕ x4</span> = ${history.s3[0]} ⊕ ${history.s3[4]} = <span class="highlight">${history.s4[0]}</span>`;
                 else if(idx === 1) exp = `[步驟4] <span class="highlight">x1</span> <span class="formula">= x1 ⊕ x0</span> = ${history.s3[1]} ⊕ ${history.s3[0]} = <span class="highlight">${history.s4[1]}</span>`;
                 else if(idx === 2) exp = `[步驟4] <span class="highlight">x2</span> <span class="formula">= ~x2</span> = ~${history.s3[2]} = <span class="highlight">${history.s4[2]}</span>`;
@@ -348,9 +357,91 @@
             document.getElementById('calc-panel').innerHTML = exp;
         }
 
+        // ==========================================
+        // 第三部分：線性擴散層 64-bit 視覺化
+        // ==========================================
+        let diff_state = Array(64).fill(0);
+        // 預設點亮中間的一個 bit
+        diff_state[31] = 1; 
+
+        // 每個暫存器對應的右旋轉常數
+        const rotrConfigs = {
+            x0: [19, 28], x1: [61, 39], x2: [1, 6], x3: [10, 17], x4: [7, 41]
+        };
+        let currentReg = 'x0';
+
+        function changeReg(reg) {
+            currentReg = reg;
+            ['x0','x1','x2','x3','x4'].forEach(id => {
+                document.getElementById('btn-reg-' + id).classList.remove('active');
+            });
+            document.getElementById('btn-reg-' + reg).classList.add('active');
+            updateDiffusionDisplay();
+        }
+
+        function toggleDiffBit(idx) {
+            diff_state[idx] = diff_state[idx] ? 0 : 1;
+            updateDiffusionDisplay();
+        }
+
+        function resetDiffusion() {
+            diff_state = Array(64).fill(0);
+            updateDiffusionDisplay();
+        }
+
+        // 模擬 64-bit 陣列的右旋轉 (向右移動 n 位，超出部分從左邊補回)
+        function rotrArray(arr, n) {
+            let res = Array(64).fill(0);
+            for (let i = 0; i < 64; i++) {
+                // 因為我們用陣列由左至右代表 bit，向右移動就是 index 增加
+                res[(i + n) % 64] = arr[i];
+            }
+            return res;
+        }
+
+        function generateDiffBitsHTML(arr, isInteractive) {
+            return arr.map((b, i) => 
+                `<div class="diff-bit val-${b} ${isInteractive ? 'interactive' : ''}" ${isInteractive ? `onclick="toggleDiffBit(${i})"` : ''} title="Bit index: ${i}">${b}</div>`
+            ).join('');
+        }
+
+        function updateDiffusionDisplay() {
+            let [r1, r2] = rotrConfigs[currentReg];
+
+            document.getElementById('diff-r1-label').innerText = `⊕ (x >>> ${r1})`;
+            document.getElementById('diff-r2-label').innerText = `⊕ (x >>> ${r2})`;
+
+            let arrR1 = rotrArray(diff_state, r1);
+            let arrR2 = rotrArray(diff_state, r2);
+
+            // 計算最終 XOR 結果
+            let arrRes = Array(64).fill(0);
+            for(let i=0; i<64; i++) {
+                arrRes[i] = diff_state[i] ^ arrR1[i] ^ arrR2[i];
+            }
+
+            document.getElementById('diff-orig').innerHTML = generateDiffBitsHTML(diff_state, true);
+            document.getElementById('diff-r1').innerHTML = generateDiffBitsHTML(arrR1, false);
+            document.getElementById('diff-r2').innerHTML = generateDiffBitsHTML(arrR2, false);
+            document.getElementById('diff-res').innerHTML = generateDiffBitsHTML(arrRes, false);
+
+            // 計算改變的位元數量
+            let origCount = diff_state.filter(b=>b===1).length;
+            let resCount = arrRes.filter(b=>b===1).length;
+            
+            let statsHtml = `擴散效應：輸入 <strong>${origCount}</strong> 個亮點，經過 XOR 疊加後擴散為 <strong>${resCount}</strong> 個亮點。`;
+            if (origCount > 0 && resCount > origCount) {
+                statsHtml += " <span style='color:#e74c3c;'>這就是完美的擴散！</span>";
+            } else if (origCount === 0) {
+                statsHtml += " (請點擊第一列的方塊來加入亮點)";
+            }
+            document.getElementById('diff-stats').innerHTML = statsHtml;
+        }
+
         // 啟動初始化
         resetState();
         updateSboxDisplay();
+        updateDiffusionDisplay();
     </script>
 </body>
 </html>
