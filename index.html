@@ -219,15 +219,24 @@
             </div>
         </section>
 		
-		<section class="section-card">
-			<a href="decrypt.html" style="text-decoration: none; color: inherit; display: block;">
-			<h2>🔓 C. XOR 解密密文</h2>
-			<p>ASCON 是 XOR-based</p>
-			<div class="note-box">
-				<p>加密時：C = P ⊕ S</p>
-				<p>因此解密：P = C ⊕ S</p>
-				<p>因為：(P ⊕ S) ⊕ S = P</p>
-			</div>
+		<section class="section-card" style="border-top-color: #e74c3c;">
+            <a href="decrypt.html" style="text-decoration: none; color: inherit; display: block;">
+                <h2>🔓 C. ASCON 接收端解密流程與資安</h2>
+                <p>ASCON 是基於 <strong>XOR (互斥或)</strong> 運算的海綿雙工結構。接收端在收到封包後，必須利用相同的共享金鑰與隨機數進行認證解密：</p>
+                
+                <ul style="margin-top: 12px; padding-left: 20px; color: #555; font-size: 0.95rem;">
+                    <li style="margin-bottom: 6px;">
+                        <strong>對稱還原：</strong> 利用 <code style="background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-family: monospace;">(P ⊕ S) ⊕ S = P</code> 原理，免去複雜的求逆運算，達成極致輕量化。
+                    </li>
+                    <li style="margin-bottom: 6px;">
+                        <strong>鐵壁防禦：</strong> 只有重算出的 Tag' 與收到的一致時才釋出明文，防止駭客透過錯誤解密訊息發動攻擊。
+                    </li>
+                </ul>
+                
+                <div style="margin-top: 20px; text-align: right; color: #e74c3c; font-weight: bold; font-size: 0.95rem;">
+                    點擊深入查看完整指南 ➔
+                </div>
+            </a>
         </section>
 
         <section class="section-card">
