@@ -137,39 +137,44 @@
     <h1>🔓 ASCON 接收端解密流程與資安複習指南</h1>
     <p>本網頁專為梳理接收端在收到封包後的「認證解密 (Authenticated Decryption)」邏輯與關鍵安全規則而設計，供隨時查閱複習。</p>
 
-    <div class="container">
-        <h2>📦 1. 解密所需的四大輸入參數</h2>
-        <p>當接收端收到網路傳來的資料後，需要準備好以下 4 個參數才能啟動解密。請牢記它們的機密分級：</p>
-        
-        <div class="param-grid">
-            <div class="param-card">
-                <div class="param-title">Key (金鑰)</div>
-                <span class="badge secret">絕對秘密 🔴</span>
-                <p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">通訊雙方事先安全共享，絕對不能在網路上公開傳輸。</p>
-            </div>
-            <div class="param-card">
-                <div class="param-title">Nonce (隨機數)</div>
-                <span class="badge public">公開傳輸 🟢</span>
-                <p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">不需要保密。隨封包附帶，告訴解密端初始化起跑特徵。</p>
-            </div>
-            <div class="param-card">
-                <div class="param-title">Ciphertext (密文)</div>
-                <span class="badge public">公開傳輸 🟢</span>
-                <p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">機密明文穿上防護罩後的亂碼狀態，可在網路上公開傳送。</p>
-            </div>
-            <div class="param-card">
-                <div class="param-title">Tag (認證標籤)</div>
-                <span class="badge public">公開傳輸 🟢</span>
-                <p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">加密端鑄造的數位防偽防竄改印章，用於解密時的核對。</p>
-            </div>
-        </div>
+	<div class="container">
+		<h2>📦 1. 解密所需的五大輸入參數</h2>
+		<p>當接收端收到網路傳來的資料後，需要準備好以下 5 個參數才能啟動解密與驗證。請牢記它們的機密分級：</p>
+		
+		<div class="param-grid">
+			<div class="param-card">
+				<div class="param-title">Key (金鑰)</div>
+				<span class="badge secret">絕對秘密 🔴</span>
+				<p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">通訊雙方事先安全共享，絕對不能在網路上公開傳輸。</p>
+			</div>
+			<div class="param-card">
+				<div class="param-title">Nonce (隨機數)</div>
+				<span class="badge public">公開傳輸 🟢</span>
+				<p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">不需要保密。隨封包附帶，告訴解密端初始化起跑特徵。</p>
+			</div>
+			<div class="param-card">
+				<div class="param-title">AD (關聯資料)</div>
+				<span class="badge public">公開傳輸 🟢</span>
+				<p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">不需加密但必須防竄改的公開資訊（如路由 IP、表頭）。</p>
+			</div>
+			<div class="param-card">
+				<div class="param-title">Ciphertext (密文)</div>
+				<span class="badge public">公開傳輸 🟢</span>
+				<p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">機密明文穿上防護罩後的亂碼狀態，可在網路上公開傳送。</p>
+			</div>
+			<div class="param-card">
+				<div class="param-title">Tag (認證標籤)</div>
+				<span class="badge public">公開傳輸 🟢</span>
+				<p style="font-size: 0.9rem; color: #64748b; margin-top: 10px;">加密端鑄造的數位防偽防竄改印章，用於解密時的核對。</p>
+			</div>
+		</div>
 
-        <div class="tip-box">
-            <h4>💡 核心資安金律 (Crucial Tip)</h4>
-            <p><strong>每次加密都必須使用全新、絕對不重複的 Nonce！</strong><br>
-            Nonce 雖然不需要保密，且通常會隨著 Ciphertext 一起大方地傳送給接收端，但在相同金鑰下如果重用了同一個 Nonce，將會導致金鑰流洩漏，使得密碼學防護全面崩潰！</p>
-        </div>
-    </div>
+		<div class="tip-box">
+			<h4>💡 核心資安金律 (Crucial Tip)</h4>
+			<p><strong>每次加密都必須使用全新、絕對不重複的 Nonce！</strong><br>
+			Nonce 雖然不需要保密，且通常會隨著 Ciphertext 與 AD 一起大方地傳送給接收端，但在相同金鑰下如果重用了同一個 Nonce，將會導致金鑰流洩漏，使得密碼學防護全面崩潰！</p>
+		</div>
+	</div>
 
     <div class="container" style="border-top-color: #2c3e50;">
         <h2>🔄 2. 接收端實際流水線流程</h2>
