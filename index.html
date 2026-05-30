@@ -219,6 +219,71 @@
     font-weight: bold;
     /* 已將粗邊框與陰影完全移除，呈現最乾淨的視覺 */
 }
+
+/* =========================================================
+           網路傳輸動畫區塊 (Encryption 到 Decryption 的橋樑)
+        ========================================================= */
+        .network-transmission {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+        .network-label {
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        .network-path {
+            width: 3px;
+            height: 200px; /* 控制兩張卡片之間的距離 */
+            margin: 0 auto;
+            /* 製作虛線流動效果 */
+            background-image: linear-gradient(to bottom, #3498db 50%, transparent 50%);
+            background-size: 100% 20px;
+            animation: dropLine 1s linear infinite; /* 1秒循環的無限動畫 */
+            position: relative;
+        }
+        @keyframes dropLine {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 20px; }
+        }
+        .network-packet {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 12px 18px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.15);
+            width: max-content;
+            z-index: 2;
+        }
+        .packet-params {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+        .param-badge {
+            background: #eafaf1; /* 綠色底代表公開安全 */
+            color: #27ae60;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        .arrow-down-head {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 12px solid #3498db;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -332,6 +397,23 @@
             </div>
         </section>
 		
+		<div class="network-transmission">
+            <div class="network-label">🌐 透過公開網路傳輸 (Insecure Channel)</div>
+            <div class="network-path">
+                <div class="network-packet">
+                    <div style="font-size: 0.85rem; color: #7f8c8d; font-weight: normal;">將公開參數打包發送給接收端</div>
+                    <div class="packet-params">
+                        <span class="param-badge">AD</span>
+                        <span class="param-badge">Nonce</span>
+                        <span class="param-badge">Ciphertext</span>
+                        <span class="param-badge">Tag</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #e74c3c; margin-top: 8px;">※ 警告：Key (金鑰) 絕對不會在此傳送 ※</div>
+                </div>
+            </div>
+            <div class="arrow-down-head"></div>
+        </div>
+
 		<section class="section-card" style="border-top-color: #e74c3c;">
             <a href="decrypt.html" style="text-decoration: none; color: inherit; display: block;">
                 <h2>🔓 ASCON 接收端解密流程與資安</h2>
